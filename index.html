@@ -20,6 +20,7 @@
             --info-color: #33ccff;
             --alert-color: #ff3333;
             --panel-border: 2px solid #1a2b3c;
+            --text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
 
         * { box-sizing: border-box; }
@@ -63,6 +64,1024 @@
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%), 
                         radial-gradient(circle, transparent 50%, rgba(0,0,0,0.8) 100%);
             background-size: 100% 4px, 100% 100%; pointer-events: none; z-index: 10;
+        }
+
+        canvas#tactical-display { width: 100%; height: 100%; display: block; }
+
+        .view-overlay { position: absolute; top: 20px; left: 20px; font-size: 1.1em; z-index: 11; text-shadow: 0 0 5px #000; pointer-events: none; }
+
+        .bottom-left { grid-column: 1; grid-row: 3; }
+        
+        .bridge-controls { 
+            grid-column: 2; grid-row: 3; 
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding-top: 0; 
+        }
+        
+        .bottom-right { grid-column: 3; grid-row: 3; }
+
+        .system-grid { display: flex; flex-direction: column; gap: 8px; }
+        .system-item { display: flex; flex-direction: column; gap: 4px; }
+        .system-label { font-weight: bold; color: var(--primary-color); font-size: 0.8em; }
+        
+        /* Crew List */
+        .crew-list { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; flex-grow: 1; padding-right: 5px;}
+        .crew-member {
+            background-color: rgba(255,255,255,0.05); padding: 8px; border-radius: 4px;
+            display: flex; justify-content: space-between; align-items: center; border-left: 3px solid var(--primary-color);
+            transition: opacity 0.3s;
+        }
+        .health-bar { width: 100%; height: 6px; background-color: #1a2b3c; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+        .health-fill { height: 100%; transition: width 0.2s, background-color 0.5s; }
+
+        #comms-log { font-size: 0.8em; line-height: 1.4; overflow-y: auto; flex-grow: 1; padding-right: 5px; color: #ccc; }
+        .log-entry { margin-bottom: 6px; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 4px; }
+        .log-time { color: var(--mystery-color); font-size: 0.85em; margin-right: 8px; }
+        .log-sci { color: #d066ff; font-weight: bold; margin-right: 4px; }
+
+        /* Buttons */
+        button {
+            background-color: rgba(255,255,255,0.05); color: var(--primary-color); border: 1px solid var(--primary-color);
+            padding: 8px 10px; font-family: inherit; cursor: pointer; transition: all 0.2s; font-weight: bold; border-radius: 3px;
+        }
+        button:hover:not(:disabled) { background-color: rgba(255,255,255,0.2); box-shadow: 0 0 12px rgba(255,255,255,0.4); }
+        button:disabled { border-color: #333; color: #555; background: rgba(0,0,0,0.5); cursor: not-allowed; }
+        button:active:not(:disabled) { transform: scale(0.97); }
+
+        .btn-alert { border-color: var(--enemy-color); color: var(--enemy-color); background: rgba(255,51,51,0.05); }
+        .btn-alert:hover:not(:disabled) { background-color: rgba(255,51,51,0.2); box-shadow: 0 0 12px rgba(255,51,51,0.4); }
+        
+        .btn-warn { border-color: var(--warn-color); color: var(--warn-color); background: rgba(255,170,0,0.05); }
+        .btn-warn:hover:not(:disabled) { background-color: rgba(255,170,0,0.2); box-shadow: 0 0 12px rgba(255,170,0,0.4); }
+        
+        .btn-info { border-color: var(--mystery-color); color: var(--mystery-color); background: rgba(51,204,255,0.05); }
+        .btn-info:hover:not(:disabled) { background-color: rgba(51,204,255,0.2); box-shadow: 0 0 12px rgba(51,204,255,0.4); }
+
+        .btn-mode.active { background-color: var(--primary-color); color: #000; box-shadow: 0 0 10px var(--primary-color); }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1a2b3c; border-radius: 2px; }
+
+        .flash-red { animation: flashRed 1s infinite; }
+        @keyframes flashRed { 0% { background-color: rgba(255,51,51,0.1); } 50% { background-color: rgba(255,51,51,0.4); } 100% { background-color: rgba(255,51,51,0.1); } }
+    </style>
+</head>
+<body>
+    <div id="bridge">
+        <div class="panel top-left">
+            <div class="header-bar">SECURITY DETACHMENT</div>
+            <div style="margin-bottom: 15px; text-align: center;">
+                <button id="btn-deploy" onclick="game.deployAwayTeam()" style="width: 100%;">DEPLOY TO FORAGE</button>
+                <div id="away-status-text" style="margin-top: 10px; font-size: 0.9em; color: var(--primary-color);">TEAM ON STANDBY</div>
+            </div>
+            <div class="crew-list" id="crew-list"></div>
+        </div>
+
+        <div class="main-view-container">
+            <div class="panel" style="padding: 0; border-color: var(--mystery-color);">
+                <div class="header-bar" style="margin-bottom: 0; background: #081a2b; color: var(--mystery-color);">
+                    <h2 style="margin:0; font-size: 1.2em;">ATLAS ORBITAL STATION</h2>
+                </div>
+            </div>
+            <div id="main-view">
+                <canvas id="tactical-display"></canvas>
+                <div class="view-overlay">
+                    <strong>ORBITAL RADAR:</strong> <br><span id="sensor-readings" style="color: var(--primary-color);">SCANNING LOCAL SECTOR</span>
+                </div>
+            </div>
+
+            <div class="panel bridge-controls">
+                
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div class="header-bar" style="margin-bottom: 0;">ORDNANCE</div>
+                    <div class="system-grid">
+                        <button class="btn-warn" id="fire-phaser" disabled>PHASERS [ -10 EN ]</button>
+                        <button class="btn-info" id="fire-torpedo" disabled>PHOTON TORP [<span id="torpedo-count">12</span>]</button>
+                        <button class="btn-alert" id="fire-pulsar" disabled>PULSAR [<span id="pulsar-count">4</span>]</button>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div class="header-bar" style="margin-bottom: 0;">TARGETING</div>
+                    <div id="target-locks" style="background: rgba(0,0,0,0.6); padding: 10px; border: 1px solid #1a2b3c; border-radius: 4px; flex-grow: 1; font-size: 0.85em; overflow-y: auto;">
+                        <div style="color: #555; text-align: center; margin-top: 10px;">NO LOCKS</div>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px;" id="ops-panel">
+                    <div class="header-bar" style="margin-bottom: 0;">ANALYSIS & OPS</div>
+                    
+                    <div id="ops-default" style="display: flex; flex-direction: column; gap: 8px;">
+                        <button class="btn-info" id="btn-tractor" onclick="game.engageTractorBeam()" disabled>TRACTOR & ANALYZE</button>
+                        <div style="font-size: 0.8em; color: #888; text-align: center; padding: 10px;">
+                            Lock onto an Unknown (Blue) vessel to scan for contraband.
+                        </div>
+                    </div>
+
+                    <div id="ops-action" style="display: none; flex-direction: column; gap: 8px;">
+                        <div style="color: var(--enemy-color); text-align: center; font-weight: bold; font-size: 0.9em; margin-bottom: 5px;">HOSTILE REVEALED</div>
+                        <button class="btn-alert" onclick="game.arrestShip()">BOARD & ARREST</button>
+                        <button class="btn-warn" onclick="game.releaseShip()">RELEASE VESSEL</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="panel top-right">
+            <div class="header-bar">STATION RESOURCES</div>
+            <div class="system-grid" style="margin-bottom: 10px;">
+                <div class="system-item">
+                    <div class="system-label">STATION SHIELDS <span id="val-shields" style="float:right; color: var(--info-color);">100%</span></div>
+                    <div class="health-bar"><div class="health-fill" id="bar-shields" style="width: 100%; background-color: var(--info-color);"></div></div>
+                </div>
+                <div class="system-item">
+                    <div class="system-label">STATION HULL <span id="val-hull" style="float:right;">100%</span></div>
+                    <div class="health-bar"><div class="health-fill" id="bar-hull" style="width: 100%; background-color: var(--friendly-color);"></div></div>
+                </div>
+                <div class="system-item">
+                    <div class="system-label">STATION MORALE <span id="val-morale" style="float:right;">100%</span></div>
+                    <div class="health-bar"><div class="health-fill" id="bar-morale" style="width: 100%; background-color: var(--primary-color);"></div></div>
+                </div>
+                <div class="system-item">
+                    <div class="system-label">FOOD & SUPPLIES <span id="val-supplies" style="float:right;">100%</span></div>
+                    <div class="health-bar"><div class="health-fill" id="bar-supplies" style="width: 100%; background-color: var(--warn-color);"></div></div>
+                </div>
+            </div>
+
+            <div style="margin-top: 10px; border-top: 1px solid #1a2b3c; padding-top: 10px;">
+                <div class="system-label" style="margin-bottom: 5px;">REACTOR ENERGY <span id="val-energy" style="float:right; color: var(--info-color);">100%</span></div>
+                <div class="health-bar" style="height: 10px;"><div class="health-fill" id="bar-energy" style="width: 100%; background-color: var(--info-color);"></div></div>
+                
+                <div style="display: flex; gap: 5px; margin-top: 10px;">
+                    <button class="btn-mode" id="mode-shields" onclick="game.setPowerMode('SHIELDS')" style="flex: 1; font-size: 0.75em; padding: 6px;">🛡️ SHIELDS</button>
+                    <button class="btn-mode active" id="mode-systems" onclick="game.setPowerMode('SYSTEMS')" style="flex: 1; font-size: 0.75em; padding: 6px;">⚙️ SYSTEMS</button>
+                    <button class="btn-mode" id="mode-weapons" onclick="game.setPowerMode('WEAPONS')" style="flex: 1; font-size: 0.75em; padding: 6px;">🔫 WEAPONS</button>
+                </div>
+            </div>
+            
+            <div style="border-top: 1px solid #1a2b3c; padding-top: 10px; font-size: 0.9em; margin-top: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--info-color);">COMMERCE CREDITS:</span>
+                    <span id="res-credits" style="color: var(--friendly-color); font-weight: bold;">0 CR</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--info-color);">SEIZED CONTRABAND:</span>
+                    <span id="res-data" style="color: var(--warn-color); font-weight: bold;">0 units</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel bottom-right">
+            <div class="header-bar">STATION LOGS</div>
+            <div id="comms-log"></div>
+        </div>
+    </div>
+
+    <script>
+        class USSAtlasGame {
+            constructor() {
+                // Core Systems
+                this.systems = { hull: 100, shields: 100, morale: 100, supplies: 100, energy: 100 };
+                this.resources = { credits: 0, data: 0 };
+                this.ammo = { torpedoes: 12, pulsars: 4 };
+                this.powerMode = 'SYSTEMS'; 
+
+                // Crew
+                this.crew = [
+                    { id: 1, name: "CMDR VANCE", role: "SEC", hp: 100, deployed: false },
+                    { id: 2, name: "LT KOWALSKI", role: "SEC", hp: 100, deployed: false },
+                    { id: 3, name: "ENS CHEN", role: "SCI", hp: 100, deployed: false },
+                    { id: 4, name: "DR ARIS", role: "MED", hp: 100, deployed: false },
+                    { id: 5, name: "SGT MAJOR", role: "TAC", hp: 100, deployed: false },
+                    { id: 6, name: "SPEC TARN", role: "ENG", hp: 100, deployed: false },
+                    { id: 7, name: "ENG RIZZO", role: "OPS", hp: 100, deployed: false }
+                ];
+                this.missionActive = false;
+                
+                // Canvas & Math
+                this.canvas = document.getElementById('tactical-display');
+                this.ctx = this.canvas.getContext('2d');
+                this.mouseX = -100; this.mouseY = -100;
+                
+                this.globeNodes = [];
+                this.globeRadius = 140;
+                this.angleX = 0.5; 
+                this.angleY = 0;   
+                
+                // Station Coordinates (Bottom Center of Canvas)
+                this.shipX = 0; 
+                this.shipY = 0;
+
+                this.targets = [];
+                this.lockedTargets = []; 
+                this.projectiles = [];
+                this.particles = [];
+                
+                // Analysis State
+                this.analyzingTarget = null;
+                this.pendingDecisionTarget = null;
+
+                // Science Facts Database
+                this.scienceFacts = [
+                    "Because space is a vacuum, destroyed ships produce no sound. The explosions you hear are synthesized by the tactical computer to improve spatial awareness.",
+                    "Firing a projectile weapon alters our orbit. The station's thrusters automatically compensate to preserve conservation of momentum.",
+                    "Lasers are invisible from the side due to the lack of scattering particles in a vacuum. You only see the beam via sensor AR overlay.",
+                    "In a vacuum, heat cannot dissipate via convection; ships firing heavy weapons must radiate heat away or boil their own crews.",
+                    "There is no 'up' in space. The enemy's gate is down.",
+                    "To catch a ship in a lower orbit, you must decelerate to drop your perigee, allowing gravity to accelerate your angular velocity.",
+                    "Energy weapons don't go 'pew'. They deposit thermal energy at the speed of light, causing the target's hull to explosively ablate into plasma."
+                ];
+
+                this.audioCtx = null;
+                this.audioInitialized = false;
+                this.timeElapsed = 0;
+                this.init();
+            }
+
+            init() {
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+
+                for (let lat = -90; lat <= 90; lat += 20) {
+                    for (let lon = 0; lon < 360; lon += 20) {
+                        const latRad = lat * (Math.PI / 180); const lonRad = lon * (Math.PI / 180);
+                        this.globeNodes.push({
+                            x: this.globeRadius * Math.cos(latRad) * Math.cos(lonRad),
+                            y: this.globeRadius * Math.sin(latRad),
+                            z: this.globeRadius * Math.cos(latRad) * Math.sin(lonRad)
+                        });
+                    }
+                }
+
+                // Audio Init (Requires User Gesture)
+                document.body.addEventListener('mousedown', () => {
+                    if (!this.audioInitialized) { this.initAudio(); this.audioInitialized = true; }
+                }, { once: true });
+
+                this.canvas.addEventListener('mousemove', (e) => {
+                    const rect = this.canvas.getBoundingClientRect();
+                    this.mouseX = e.clientX - rect.left; this.mouseY = e.clientY - rect.top;
+                });
+                this.canvas.addEventListener('mouseleave', () => { this.mouseX = -100; this.mouseY = -100; });
+                this.canvas.addEventListener('mousedown', () => this.attemptLock());
+
+                document.getElementById('fire-phaser').addEventListener('click', () => this.fireWeapon('phaser'));
+                document.getElementById('fire-torpedo').addEventListener('click', () => this.fireWeapon('torpedo'));
+                document.getElementById('fire-pulsar').addEventListener('click', () => this.fireWeapon('pulsar'));
+
+                this.log("Atlas Station Orbital Defenses Online.");
+                this.renderCrewUI();
+
+                // Start Loops
+                setInterval(() => this.systemTick(), 1000); 
+                requestAnimationFrame(() => this.renderLoop()); 
+            }
+
+            resizeCanvas() {
+                const rect = document.getElementById('main-view').getBoundingClientRect();
+                this.canvas.width = rect.width; this.canvas.height = rect.height;
+                // Anchor the station to the bottom center of the view
+                this.shipX = this.canvas.width / 2;
+                this.shipY = this.canvas.height;
+            }
+
+            // --- AUDIO (Safeguarded against crashes) ---
+            initAudio() {
+                if (!this.audioCtx) {
+                    try { this.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } 
+                    catch(e) { console.warn("Audio Context creation failed."); return; }
+                }
+                if (this.audioCtx.state === 'suspended') {
+                    this.audioCtx.resume().catch(e => console.warn("Audio blocked:", e));
+                }
+            }
+
+            playSound(type) {
+                if (!this.audioCtx || this.audioCtx.state !== 'running') return;
+                
+                try {
+                    const osc = this.audioCtx.createOscillator(); const gain = this.audioCtx.createGain();
+                    osc.connect(gain); gain.connect(this.audioCtx.destination);
+                    const now = this.audioCtx.currentTime;
+
+                    if (type === 'lock') {
+                        osc.type = 'square'; osc.frequency.setValueAtTime(1200, now);
+                        gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                        osc.start(now); osc.stop(now + 0.1);
+                    } else if (type === 'phaser') {
+                        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(150, now + 0.2);
+                        gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                        osc.start(now); osc.stop(now + 0.2);
+                    } else if (type === 'torpedo') {
+                        osc.type = 'square'; osc.frequency.setValueAtTime(300, now); osc.frequency.linearRampToValueAtTime(80, now + 0.4);
+                        gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                        osc.start(now); osc.stop(now + 0.4);
+                    } else if (type === 'explosion') {
+                        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, now); osc.frequency.exponentialRampToValueAtTime(10, now + 0.6);
+                        gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 1.0);
+                        osc.start(now); osc.stop(now + 1.0);
+                    } else if (type === 'tractor') {
+                        osc.type = 'sine'; osc.frequency.setValueAtTime(150, now); osc.frequency.linearRampToValueAtTime(250, now + 3.0);
+                        gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 3.0);
+                        osc.start(now); osc.stop(now + 3.0);
+                    } else if (type === 'alert') {
+                        osc.type = 'square'; osc.frequency.setValueAtTime(600, now); osc.frequency.setValueAtTime(400, now + 0.3);
+                        gain.gain.setValueAtTime(0.05, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.6);
+                        osc.start(now); osc.stop(now + 0.6);
+                    } else if (type === 'teleport') {
+                        osc.type = 'sine'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(1200, now + 1.5);
+                        gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 1.5);
+                        osc.start(now); osc.stop(now + 1.5);
+                    }
+                } catch(e) {} // Fail silently so game doesn't freeze if audio node fails
+            }
+
+            // --- 1HZ LOGIC & POWER ROUTING ---
+            setPowerMode(mode) {
+                this.powerMode = mode;
+                this.playSound('lock');
+                document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
+                document.getElementById(`mode-${mode.toLowerCase()}`).classList.add('active');
+                
+                let stats = mode === 'SHIELDS' ? "+3 SHD / +2 EN" : mode === 'WEAPONS' ? "NO SHD / +8 EN" : "+1 HULL / +4 EN";
+                this.log(`Reactor routed to ${mode}. [${stats}]`);
+            }
+
+            systemTick() {
+                // Resolve Scanning Logically (Decoupled from render loop)
+                if (this.analyzingTarget) {
+                    if (Date.now() - this.analyzingTarget.scanStart >= 3000) {
+                        this.resolveScan();
+                    }
+                }
+
+                // Clean dead target tracking
+                if (this.analyzingTarget && !this.analyzingTarget.alive) this.analyzingTarget = null;
+                if (this.pendingDecisionTarget && !this.pendingDecisionTarget.alive) this.resetOpsPanel();
+
+                // Power Management
+                if (this.powerMode === 'SYSTEMS') {
+                    this.systems.energy = Math.min(100, this.systems.energy + 4);
+                    this.systems.hull = Math.min(100, this.systems.hull + 1);
+                } else if (this.powerMode === 'SHIELDS') {
+                    this.systems.energy = Math.min(100, this.systems.energy + 2);
+                    this.systems.shields = Math.min(100, this.systems.shields + 3); 
+                } else if (this.powerMode === 'WEAPONS') {
+                    this.systems.energy = Math.min(100, this.systems.energy + 8); 
+                }
+
+                // Supplies Drain
+                let prevSupplies = this.systems.supplies;
+                this.systems.supplies -= 0.8; 
+                
+                if (prevSupplies > 25 && this.systems.supplies <= 25) {
+                    this.log("CRITICAL: Supplies dropping. Deploy Away Team to surface for immediate foraging!");
+                    this.playSound('alert');
+                }
+
+                // Science Facts
+                if (Math.random() < 0.1 && this.timeElapsed > 10 && this.timeElapsed % 10 === 0) {
+                    const fact = this.scienceFacts[Math.floor(Math.random() * this.scienceFacts.length)];
+                    this.log(`<span class="log-sci">[SCIENCE OFF.]</span> ${fact}`);
+                }
+
+                // SPAWN SHIPS: Target speed heavily reduced
+                if (Math.random() < 0.4 && this.targets.length < 15) {
+                    const roll = Math.random();
+                    let factionData;
+                    
+                    if (roll <= 0.25) { 
+                        factionData = { type: 'mystery', color: '#33ccff', prefix: 'UNK-' };
+                    } else if (roll <= 0.65) { 
+                        factionData = { type: 'friendly', color: '#39ff14', prefix: 'FRT-' };
+                    } else { 
+                        factionData = { type: 'enemy', color: '#ff3333', prefix: 'KLI-' };
+                    }
+
+                    // 85% Slow ships, 15% Fast ships
+                    const speedMag = Math.random() > 0.85 ? (Math.random() * 0.005 + 0.003) : (Math.random() * 0.002 + 0.0005);
+
+                    this.targets.push({
+                        id: factionData.prefix + Math.floor(Math.random()*899+100),
+                        faction: factionData.type, color: factionData.color,
+                        orbitRadius: this.globeRadius + 60 + Math.random() * 120, 
+                        angle: Math.random() * Math.PI * 2,
+                        speed: speedMag * (Math.random() > 0.5 ? 1 : -1),
+                        yOffset: (Math.random() - 0.5) * 120,
+                        hull: 100, alive: true, frozen: false, beamCooldown: 3
+                    });
+                }
+
+                // COMMERCE & ENEMY ATTACKS
+                this.targets.forEach((tgt) => {
+                    if (tgt.faction === 'friendly' && Math.random() < 0.03) {
+                        this.resources.credits += 10;
+                        this.log(`Commerce tariff collected from ${tgt.id}: +10 CR`);
+                        tgt.alive = false; 
+                    }
+                    
+                    if (tgt.beamCooldown > 0) tgt.beamCooldown--;
+                    if (tgt.faction === 'enemy' && tgt.beamCooldown <= 0 && Math.random() < 0.1 && !tgt.frozen) {
+                        // Enemy fires at station (Bottom Center)
+                        this.projectiles.push({ type: 'enemy_beam', target: { screenX: this.shipX, screenY: this.shipY }, origin: tgt, progress: 0 });
+                        tgt.beamCooldown = 4; // 4 seconds before firing again
+                    }
+                });
+
+                // SECURITY TEAM
+                if (this.missionActive) {
+                    let teamAlive = false;
+                    let gatherRate = 0;
+
+                    this.crew.forEach(c => {
+                        if (c.deployed && c.hp > 0) {
+                            teamAlive = true;
+                            gatherRate += 0.5; 
+                            if (Math.random() > 0.4) {
+                                c.hp -= (Math.random() * 7 + 2); 
+                                if (c.hp <= 0) { c.hp = 0; this.playSound('alert'); this.log(`TRAGEDY: ${c.name} killed on surface.`); this.systems.morale -= 15;}
+                            }
+                        }
+                    });
+
+                    if (gatherRate > 0) this.systems.supplies = Math.min(100, this.systems.supplies + gatherRate);
+
+                    if (!teamAlive) {
+                        this.missionActive = false;
+                        document.getElementById('btn-deploy').disabled = false;
+                        document.getElementById('away-status-text').innerText = "TEAM LOST";
+                        document.getElementById('away-status-text').style.color = "var(--enemy-color)";
+                    }
+                    this.renderCrewUI();
+                } else {
+                    let healed = false;
+                    this.crew.forEach(c => {
+                        if (!c.deployed && c.hp > 0 && c.hp < 100) { c.hp = Math.min(100, c.hp + 6); healed = true; }
+                    });
+                    if(healed) this.renderCrewUI();
+                }
+
+                this.timeElapsed++;
+                this.updateUI();
+            }
+
+            deployAwayTeam() {
+                const available = this.crew.filter(c => c.hp > 50 && !c.deployed);
+                if (available.length === 0) { this.log("No fit crew available for deployment."); return; }
+
+                this.playSound('teleport');
+                this.missionActive = true;
+                document.getElementById('btn-deploy').disabled = true;
+                document.getElementById('away-status-text').innerText = "FORAGING SURFACE";
+                document.getElementById('away-status-text').style.color = "var(--warn-color)";
+
+                available.forEach(c => c.deployed = true);
+                this.log(`Away team deployed. Gathering supplies. Monitor their vitals carefully.`);
+                this.renderCrewUI();
+            }
+
+            beamUpMember(id) {
+                const member = this.crew.find(c => c.id === id);
+                if(member && member.deployed) {
+                    this.playSound('teleport');
+                    member.deployed = false;
+                    this.log(`Emergency Transport: ${member.name} recalled to infirmary.`);
+                    
+                    if (!this.crew.some(c => c.deployed && c.hp > 0)) {
+                        this.missionActive = false;
+                        document.getElementById('btn-deploy').disabled = false;
+                        document.getElementById('away-status-text').innerText = "TEAM ABOARD";
+                        document.getElementById('away-status-text').style.color = "var(--primary-color)";
+                    }
+                    this.renderCrewUI();
+                }
+            }
+
+            renderCrewUI() {
+                const list = document.getElementById('crew-list');
+                list.innerHTML = '';
+                this.crew.forEach(c => {
+                    let color = '#39ff14';
+                    if (c.hp < 30) color = '#ff3333';
+                    else if (c.hp < 60) color = '#ffaa00';
+
+                    const statusTxt = c.hp <= 0 ? 'KIA' : (c.deployed ? 'DEPL' : 'RDY');
+                    const btnHtml = (c.deployed && c.hp > 0) ? `<button class="btn-warn" style="padding: 2px 6px; font-size: 0.7em;" onclick="game.beamUpMember(${c.id})">MEDEVAC</button>` : '';
+                    const opacity = c.hp <= 0 ? '0.3' : '1.0';
+
+                    list.innerHTML += `
+                        <div class="crew-member" style="opacity: ${opacity};">
+                            <div style="flex-grow: 1;">
+                                <div style="display:flex; justify-content:space-between; font-weight:bold; color:${c.hp<=0?'#555':'#fff'}; font-size: 0.9em;">
+                                    <span>${c.name}</span> <span style="font-size:0.8em; color:${color}">${statusTxt}</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:10px; margin-top:4px;">
+                                    <span style="font-size: 0.8em; color:#888; width: 25px;">${c.role}</span>
+                                    <div class="health-bar" style="width: calc(100% - 40px);"><div class="health-fill" style="width: ${c.hp}%; background-color: ${color};"></div></div>
+                                </div>
+                            </div>
+                            <div style="margin-left: 10px;">${btnHtml}</div>
+                        </div>`;
+                });
+            }
+
+            // --- OPERATIONS & CUSTOMS ---
+            engageTractorBeam() {
+                const tgt = this.lockedTargets.find(t => t.faction === 'mystery');
+                if (tgt && !this.analyzingTarget) {
+                    this.playSound('tractor');
+                    tgt.frozen = true;
+                    this.analyzingTarget = tgt;
+                    this.analyzingTarget.scanStart = Date.now();
+                    this.log(`Tractor beam engaged on ${tgt.id}. Initiating deep scan...`);
+                    
+                    document.getElementById('btn-tractor').disabled = true;
+                    document.getElementById('btn-tractor').innerText = "SCANNING...";
+                }
+            }
+
+            resolveScan() {
+                const tgt = this.analyzingTarget;
+                this.analyzingTarget = null; // Clear state immediately
+                
+                if (!tgt || !tgt.alive) {
+                    this.resetOpsPanel();
+                    return;
+                }
+
+                tgt.frozen = false;
+                
+                if (Math.random() > 0.4) {
+                    tgt.faction = 'enemy';
+                    tgt.color = '#ff3333'; 
+                    this.playSound('alert');
+                    this.log(`WARNING: ${tgt.id} is hostile! Contraband detected!`);
+                    
+                    this.pendingDecisionTarget = tgt;
+                    document.getElementById('ops-default').style.display = 'none';
+                    document.getElementById('ops-action').style.display = 'flex';
+                    document.getElementById('ops-panel').classList.add('flash-red');
+                } else {
+                    tgt.faction = 'friendly';
+                    tgt.color = '#39ff14'; 
+                    this.log(`Scan complete. ${tgt.id} cleared for commerce.`);
+                    document.getElementById('btn-tractor').disabled = false;
+                    document.getElementById('btn-tractor').innerText = "TRACTOR & ANALYZE";
+                }
+                
+                this.updateTargetUI();
+            }
+
+            arrestShip() {
+                if (!this.pendingDecisionTarget) return;
+                
+                if (!this.missionActive) {
+                    this.playSound('alert');
+                    this.log("COMMAND REFUSED: You must deploy the Security Team to board!");
+                    return;
+                }
+
+                this.playSound('teleport');
+                const tgt = this.pendingDecisionTarget;
+                
+                if (Math.random() > 0.3) {
+                    this.log(`Security Team successfully breached ${tgt.id}. Contraband secured.`);
+                    this.resources.data += 100;
+                    tgt.alive = false;
+                } else {
+                    this.log(`Security Team met heavy resistance! Target destroyed in firefight.`);
+                    this.crew.forEach(c => { if(c.deployed) c.hp -= 25; });
+                    this.triggerExplosion(tgt.screenX, tgt.screenY);
+                    tgt.alive = false;
+                }
+
+                this.resetOpsPanel();
+            }
+
+            releaseShip() {
+                if (!this.pendingDecisionTarget) return;
+                this.log(`Station Command released hostile vessel ${this.pendingDecisionTarget.id}. Morale penalty applied.`);
+                this.systems.morale -= 10;
+                this.pendingDecisionTarget.alive = false; 
+                this.resetOpsPanel();
+            }
+
+            resetOpsPanel() {
+                this.pendingDecisionTarget = null;
+                document.getElementById('ops-default').style.display = 'flex';
+                document.getElementById('ops-action').style.display = 'none';
+                document.getElementById('ops-panel').classList.remove('flash-red');
+                document.getElementById('btn-tractor').disabled = false;
+                document.getElementById('btn-tractor').innerText = "TRACTOR & ANALYZE";
+                this.updateTargetUI();
+            }
+
+            // --- MATH GUARDS ---
+            project3D(x, y, z, cx, cy, cosX, sinX, cosY, sinY) {
+                let x1 = x * cosY - z * sinY; let z1 = z * cosY + x * sinY;
+                let y2 = y * cosX - z1 * sinX; let z2 = z1 * cosX + y * sinX;
+                
+                // CRITICAL FIX: Prevent division by zero and extreme negative scales that crash Canvas API
+                if (z2 <= -240) z2 = -240; 
+                
+                const scale = 250 / (250 + z2); 
+                return { px: cx + x1 * scale, py: cy + y2 * scale, scale: scale, depth: z2 };
+            }
+
+            attemptLock() {
+                this.initAudio();
+                let hit = null; let minDist = 30;
+
+                this.targets.forEach(tgt => {
+                    if (tgt.alive) {
+                        const tgtX = tgt.screenX || 0;
+                        const tgtY = tgt.screenY || 0;
+                        const dist = Math.hypot(tgtX - this.mouseX, tgtY - this.mouseY);
+                        if (dist < minDist) { minDist = dist; hit = tgt; }
+                    }
+                });
+
+                if (hit) {
+                    const idx = this.lockedTargets.indexOf(hit);
+                    if (idx > -1) {
+                        this.lockedTargets.splice(idx, 1); 
+                    } else if (this.lockedTargets.length < 2) {
+                        this.lockedTargets.push(hit); 
+                        this.playSound('lock');
+                    }
+                } else {
+                    this.lockedTargets = []; 
+                }
+                this.updateTargetUI();
+            }
+
+            updateTargetUI() {
+                this.lockedTargets = this.lockedTargets.filter(t => t.alive);
+                const container = document.getElementById('target-locks');
+                
+                if (this.lockedTargets.length === 0) {
+                    container.innerHTML = '<div style="color: #555; text-align: center; margin-top: 15px;">NO TARGETS LOCKED</div>';
+                    this.setWeaponButtons(false, false, false);
+                    document.getElementById('btn-tractor').disabled = true;
+                    return;
+                }
+
+                let html = ''; let hasMystery = false; let hasEnemy = false;
+
+                this.lockedTargets.forEach((t, i) => {
+                    const statusText = t.faction === 'mystery' ? 'ANALYSIS REQ' : 'LOCKED';
+                    html += `<div style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px dashed #1a2b3c; padding-bottom:4px;">
+                                <span style="color:#fff; font-weight: bold;">TRK-${i+1} [${t.id}]</span>
+                                <span style="color:${t.color}; font-weight:bold; animation: pulse 1s infinite;">${statusText}</span>
+                             </div>`;
+                    if (t.faction === 'mystery') hasMystery = true;
+                    if (t.faction === 'enemy') hasEnemy = true;
+                });
+                container.innerHTML = html;
+
+                const canShoot = hasEnemy;
+                this.setWeaponButtons(
+                    canShoot && this.systems.energy >= 10,
+                    canShoot && this.ammo.torpedoes > 0 && this.systems.energy >= 20,
+                    canShoot && this.ammo.pulsars > 0 && this.systems.energy >= 50
+                );
+
+                if (hasMystery && !this.analyzingTarget && !this.pendingDecisionTarget) document.getElementById('btn-tractor').disabled = false;
+                else if (!this.analyzingTarget) document.getElementById('btn-tractor').disabled = true;
+            }
+
+            setWeaponButtons(phaser, torpedo, pulsar) {
+                document.getElementById('fire-phaser').disabled = !phaser;
+                document.getElementById('fire-torpedo').disabled = !torpedo;
+                document.getElementById('fire-pulsar').disabled = !pulsar;
+            }
+
+            fireWeapon(type) {
+                const enemies = this.lockedTargets.filter(t => t.faction === 'enemy');
+                if (enemies.length === 0) return;
+
+                if (type === 'phaser' && this.systems.energy >= 10) {
+                    this.playSound('phaser');
+                    this.systems.energy -= 10;
+                    enemies.forEach((tgt, i) => {
+                        setTimeout(() => { if(tgt.alive) this.projectiles.push({ type: 'beam', target: tgt, progress: 0, color: '#ff3333' }); }, i * 200);
+                    });
+                } else if (type === 'torpedo' && this.ammo.torpedoes > 0 && this.systems.energy >= 20) {
+                    this.playSound('torpedo');
+                    this.ammo.torpedoes--; document.getElementById('torpedo-count').innerText = this.ammo.torpedoes;
+                    this.systems.energy -= 20;
+                    
+                    enemies.forEach((tgt, i) => {
+                        setTimeout(() => {
+                            if(tgt.alive) {
+                                const tgtX = tgt.screenX || this.shipX;
+                                const tgtY = tgt.screenY || this.shipY - 100;
+                                // Math Origin Fixed to Station (shipX, shipY)
+                                const angle = Math.atan2(tgtY - this.shipY, tgtX - this.shipX);
+                                this.projectiles.push({ type: 'torpedo', target: tgt, x: this.shipX, y: this.shipY, angle: angle, speed: 10 });
+                            }
+                        }, i * 400);
+                    });
+                } else if (type === 'pulsar' && this.ammo.pulsars > 0 && this.systems.energy >= 50) {
+                    this.playSound('pulsar');
+                    this.ammo.pulsars--; document.getElementById('pulsar-count').innerText = this.ammo.pulsars;
+                    this.systems.energy -= 50;
+                    this.projectiles.push({ type: 'pulsar', radius: 0 });
+                    
+                    this.targets.forEach(tgt => {
+                        if (tgt.alive && tgt.faction !== 'friendly') {
+                            setTimeout(() => { tgt.alive = false; this.triggerExplosion(tgt.screenX || cx, tgt.screenY || cy); }, Math.random() * 800 + 400); 
+                        }
+                    });
+                    this.lockedTargets = [];
+                }
+                this.updateUI();
+                this.updateTargetUI();
+            }
+
+            triggerExplosion(x, y) {
+                if (isNaN(x) || isNaN(y)) return; // Failsafe
+                this.playSound('explosion');
+                for(let i=0; i<35; i++) {
+                    this.particles.push({
+                        x: x, y: y,
+                        vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 0.5) * 15,
+                        life: 1.0, color: Math.random() > 0.5 ? '#ffaa00' : '#ff3333'
+                    });
+                }
+                this.updateTargetUI();
+            }
+
+            updateUI() {
+                const hullEl = document.getElementById(`val-hull`); if(hullEl) hullEl.innerText = `${Math.floor(this.systems.hull)}%`;
+                const hullBar = document.getElementById(`bar-hull`); if(hullBar) hullBar.style.width = `${Math.floor(this.systems.hull)}%`;
+                
+                const sldEl = document.getElementById(`val-shields`); if(sldEl) sldEl.innerText = `${Math.floor(this.systems.shields)}%`;
+                const sldBar = document.getElementById(`bar-shields`); if(sldBar) sldBar.style.width = `${Math.floor(this.systems.shields)}%`;
+                
+                const morEl = document.getElementById(`val-morale`); if(morEl) morEl.innerText = `${Math.floor(this.systems.morale)}%`;
+                const morBar = document.getElementById(`bar-morale`); if(morBar) morBar.style.width = `${Math.floor(this.systems.morale)}%`;
+
+                const supEl = document.getElementById(`val-supplies`); if(supEl) supEl.innerText = `${Math.floor(this.systems.supplies)}%`;
+                const supBar = document.getElementById(`bar-supplies`); 
+                if(supBar) {
+                    supBar.style.width = `${Math.max(0, Math.floor(this.systems.supplies))}%`;
+                    if (this.systems.supplies < 25) supBar.style.backgroundColor = '#ff3333';
+                    else if (this.systems.supplies < 50) supBar.style.backgroundColor = '#ffaa00';
+                    else supBar.style.backgroundColor = '#39ff14';
+                }
+
+                const engEl = document.getElementById(`val-energy`); if(engEl) engEl.innerText = `${Math.floor(this.systems.energy)}%`;
+                const engBar = document.getElementById(`bar-energy`); 
+                if(engBar) {
+                    engBar.style.width = `${Math.max(0, Math.floor(this.systems.energy))}%`;
+                    if (this.powerMode === 'WEAPONS') engBar.style.backgroundColor = '#ff3333';
+                    else if (this.powerMode === 'SHIELDS') engBar.style.backgroundColor = '#33ccff';
+                    else engBar.style.backgroundColor = '#ffffff';
+                }
+
+                document.getElementById('res-credits').innerText = `${this.resources.credits} CR`;
+                document.getElementById('res-data').innerText = `${this.resources.data} units`;
+
+                this.updateTargetUI(); 
+
+                if (this.systems.hull <= 0 || this.systems.supplies <= 0) {
+                    let reason = this.systems.hull <= 0 ? "STATION DESTROYED" : "SUPPLIES DEPLETED. CREW STARVED";
+                    alert(`${reason}. SIMULATION OVER.`);
+                    location.reload();
+                }
+            }
+
+            // --- RENDER LOOP ---
+            renderLoop() {
+                // Array Culling to prevent memory Bloat
+                if (this.projectiles.length > 50) this.projectiles = this.projectiles.slice(-50);
+                if (this.particles.length > 150) this.particles = this.particles.slice(-150);
+
+                const w = this.canvas.width; const h = this.canvas.height;
+                const cx = w / 2; const cy = h / 2;
+
+                this.ctx.clearRect(0, 0, w, h); 
+
+                // 1. BACKGROUND LAYER
+                this.ctx.globalCompositeOperation = 'lighter';
+                this.angleY += 0.003; 
+                const cosX = Math.cos(this.angleX), sinX = Math.sin(this.angleX);
+                const cosY = Math.cos(this.angleY), sinY = Math.sin(this.angleY);
+
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; 
+                this.ctx.lineWidth = 1;
+                for (let r = this.globeRadius + 50; r <= 350; r += 50) {
+                    this.ctx.beginPath();
+                    for (let angle = 0; angle <= Math.PI * 2; angle += 0.1) {
+                        const tx = r * Math.cos(angle); const tz = r * Math.sin(angle);
+                        const p = this.project3D(tx, 0, tz, cx, cy, cosX, sinX, cosY, sinY);
+                        if(angle === 0) this.ctx.moveTo(p.px, p.py); else this.ctx.lineTo(p.px, p.py);
+                    }
+                    this.ctx.closePath(); this.ctx.stroke();
+                }
+
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                this.ctx.lineWidth = 1.5;
+                this.globeNodes.forEach(n => {
+                    const p = this.project3D(n.x, n.y, n.z, cx, cy, cosX, sinX, cosY, sinY);
+                    this.ctx.globalAlpha = p.depth > 0 ? 0.3 : 0.8;
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.fillRect(p.px, p.py, 2, 2);
+                });
+
+                const coreGlow = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, this.globeRadius);
+                coreGlow.addColorStop(0, 'rgba(255,255,255,0.15)'); 
+                coreGlow.addColorStop(1, 'rgba(255,255,255,0)');
+                this.ctx.fillStyle = coreGlow;
+                this.ctx.beginPath(); this.ctx.arc(cx, cy, this.globeRadius, 0, Math.PI*2); this.ctx.fill();
+
+                // Tractor Beam Originates from Station
+                if (this.analyzingTarget && this.analyzingTarget.screenX) {
+                    this.ctx.strokeStyle = 'rgba(51, 204, 255, 0.6)';
+                    this.ctx.lineWidth = 5;
+                    this.ctx.beginPath(); this.ctx.moveTo(this.shipX, this.shipY); this.ctx.lineTo(this.analyzingTarget.screenX, this.analyzingTarget.screenY); this.ctx.stroke();
+                }
+
+                // 2. FOREGROUND LAYER (Source Over prevents fading)
+                this.ctx.globalCompositeOperation = 'source-over';
+
+                // Render Targets
+                for (let i = this.targets.length - 1; i >= 0; i--) {
+                    let tgt = this.targets[i];
+                    if(!tgt.alive) continue;
+                    
+                    if(!tgt.frozen) tgt.angle += tgt.speed;
+                    
+                    const tx = tgt.orbitRadius * Math.cos(tgt.angle);
+                    const ty = tgt.yOffset; 
+                    const tz = tgt.orbitRadius * Math.sin(tgt.angle);
+
+                    const p = this.project3D(tx, ty, tz, cx, cy, cosX, sinX, cosY, sinY);
+                    tgt.screenX = p.px; tgt.screenY = p.py; tgt.depth = p.depth;
+
+                    const anchor = this.project3D(tx, 0, tz, cx, cy, cosX, sinX, cosY, sinY);
+                    
+                    tgt.isOccluded = (p.depth > 0 && Math.hypot(p.px - cx, p.py - cy) < this.globeRadius * 0.8);
+                    this.ctx.globalAlpha = tgt.isOccluded ? 0.2 : 1.0;
+
+                    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'; this.ctx.lineWidth = 1; this.ctx.setLineDash([2, 4]);
+                    this.ctx.beginPath(); this.ctx.moveTo(anchor.px, anchor.py); this.ctx.lineTo(p.px, p.py); this.ctx.stroke();
+                    this.ctx.setLineDash([]);
+                    
+                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; 
+                    this.ctx.beginPath(); this.ctx.arc(anchor.px, anchor.py, 2, 0, Math.PI*2); this.ctx.fill();
+
+                    // Solid Geometric Shapes
+                    this.ctx.strokeStyle = tgt.color; this.ctx.fillStyle = tgt.color; this.ctx.lineWidth = 2;
+                    const s = 6 * p.scale;
+                    
+                    this.ctx.beginPath();
+                    if (tgt.faction === 'enemy') { 
+                        this.ctx.moveTo(p.px, p.py - s*1.5); this.ctx.lineTo(p.px + s, p.py + s); this.ctx.lineTo(p.px - s, p.py + s); 
+                    } else if (tgt.faction === 'friendly') { 
+                        this.ctx.arc(p.px, p.py, s, 0, Math.PI*2); 
+                    } else { 
+                        this.ctx.moveTo(p.px, p.py - s*1.2); this.ctx.lineTo(p.px + s*1.2, p.py); this.ctx.lineTo(p.px, p.py + s*1.2); this.ctx.lineTo(p.px - s*1.2, p.py); 
+                    }
+                    this.ctx.closePath(); 
+                    this.ctx.fill(); 
+                    this.ctx.stroke();
+                    
+                    this.ctx.fillStyle = tgt.color; this.ctx.font = "10px Courier"; this.ctx.fillText(tgt.id, p.px + 10, p.py);
+
+                    if (this.lockedTargets.includes(tgt)) {
+                        this.ctx.strokeStyle = 'rgba(255,255,255,0.8)'; 
+                        const box = 15 * p.scale + Math.sin(Date.now() / 150) * 3;
+                        this.ctx.strokeRect(p.px - box, p.py - box, box*2, box*2);
+                    }
+
+                    if (this.analyzingTarget === tgt) {
+                        const elapsed = Date.now() - tgt.scanStart;
+                        const pct = Math.min(1.0, elapsed / 3000);
+                        this.ctx.strokeStyle = '#33ccff'; this.ctx.strokeRect(p.px - 20, p.py - 25, 40, 4);
+                        this.ctx.fillStyle = '#33ccff'; this.ctx.fillRect(p.px - 20, p.py - 25, 40 * pct, 4);
+                    }
+                }
+
+                this.targets = this.targets.filter(t => t.alive);
+
+                // 3. Projectiles
+                for (let pIdx = this.projectiles.length - 1; pIdx >= 0; pIdx--) {
+                    let proj = this.projectiles[pIdx];
+                    
+                    if (proj.type === 'beam') {
+                        proj.progress += 0.15;
+                        if (proj.progress >= 1) {
+                            proj.target.hull -= 34; 
+                            if (proj.target.hull <= 0) proj.target.alive = false;
+                            this.triggerExplosion(proj.target.screenX, proj.target.screenY);
+                            this.projectiles.splice(pIdx, 1); continue;
+                        }
+                        const bx = this.shipX + (proj.target.screenX - this.shipX) * proj.progress; 
+                        const by = this.shipY + (proj.target.screenY - this.shipY) * proj.progress;
+                        this.ctx.strokeStyle = '#ffffff'; this.ctx.lineWidth = 4; this.ctx.shadowBlur = 15; this.ctx.shadowColor = proj.color;
+                        this.ctx.beginPath(); this.ctx.moveTo(this.shipX, this.shipY); this.ctx.lineTo(bx, by); this.ctx.stroke(); this.ctx.shadowBlur = 0;
+                    
+                    } else if (proj.type === 'torpedo') {
+                        if (proj.target && proj.target.alive && proj.target.screenX !== undefined) {
+                            const tgtAngle = Math.atan2(proj.target.screenY - proj.y, proj.target.screenX - proj.x);
+                            let aDiff = tgtAngle - proj.angle;
+                            // Failsafe normalization to prevent Infinity/NaN locks
+                            aDiff = Math.atan2(Math.sin(aDiff), Math.cos(aDiff)); 
+                            if (!isNaN(aDiff)) proj.angle += aDiff * 0.1;
+                        }
+                        proj.x += Math.cos(proj.angle) * proj.speed; proj.y += Math.sin(proj.angle) * proj.speed;
+
+                        if (isNaN(proj.x) || isNaN(proj.y)) { this.projectiles.splice(pIdx, 1); continue; }
+
+                        this.ctx.fillStyle = '#ffffff'; this.ctx.shadowBlur = 20; this.ctx.shadowColor = '#33ccff';
+                        this.ctx.beginPath(); this.ctx.arc(proj.x, proj.y, 6, 0, Math.PI*2); this.ctx.fill(); this.ctx.shadowBlur = 0;
+
+                        if (proj.target && Math.hypot(proj.target.screenX - proj.x, proj.target.screenY - proj.y) < 15) {
+                            proj.target.hull -= 100; 
+                            if (proj.target.hull <= 0) proj.target.alive = false;
+                            this.triggerExplosion(proj.target.screenX, proj.target.screenY);
+                            this.projectiles.splice(pIdx, 1);
+                        } else if (proj.y < 0 || proj.y > h || proj.x < 0 || proj.x > w) {
+                            this.projectiles.splice(pIdx, 1);
+                        }
+                    
+                    } else if (proj.type === 'enemy_beam') {
+                        proj.progress += 0.15;
+                        if (proj.progress >= 1) {
+                            this.systems.hull -= (this.systems.shields > 0) ? 0 : 5;
+                            this.systems.shields = Math.max(0, this.systems.shields - 10);
+                            this.playSound('explosion');
+                            this.projectiles.splice(pIdx, 1); continue;
+                        }
+                        if(proj.origin.screenX === undefined) continue;
+                        const bx = proj.origin.screenX + (this.shipX - proj.origin.screenX) * proj.progress; 
+                        const by = proj.origin.screenY + (this.shipY - proj.origin.screenY) * proj.progress;
+                        this.ctx.strokeStyle = '#ffffff'; this.ctx.lineWidth = 4; this.ctx.shadowBlur = 15; this.ctx.shadowColor = '#ff3333';
+                        this.ctx.beginPath(); this.ctx.moveTo(proj.origin.screenX, proj.origin.screenY); this.ctx.lineTo(bx, by); this.ctx.stroke(); this.ctx.shadowBlur = 0;
+                    
+                    } else if (proj.type === 'pulsar') {
+                        proj.radius += 15;
+                        if (proj.radius > w) { this.projectiles.splice(pIdx, 1); continue; }
+                        this.ctx.strokeStyle = `rgba(255, 170, 0, ${Math.max(0, 1 - proj.radius/w)})`;
+                        this.ctx.lineWidth = 30; this.ctx.shadowBlur = 20; this.ctx.shadowColor = '#ffaa00';
+                        this.ctx.beginPath(); this.ctx.arc(this.shipX, this.shipY, proj.radius, 0, Math.PI*2); this.ctx.stroke(); this.ctx.shadowBlur = 0;
+                    }
+                }
+
+                // 4. Particles
+                this.ctx.globalAlpha = 1.0;
+                for (let idx = this.particles.length - 1; idx >= 0; idx--) {
+                    let pt = this.particles[idx];
+                    pt.x += pt.vx; pt.y += pt.vy; pt.life -= 0.03;
+                    if (pt.life <= 0) { this.particles.splice(idx, 1); continue; }
+                    this.ctx.fillStyle = pt.color; this.ctx.globalAlpha = pt.life;
+                    this.ctx.beginPath(); this.ctx.arc(pt.x, pt.y, pt.life * 5, 0, Math.PI*2); this.ctx.fill();
+                }
+                this.ctx.globalAlpha = 1.0;
+
+                // 5. Crosshair
+                if (this.mouseX > 0 && this.mouseY > 0) {
+                    let drawX = this.mouseX; let drawY = this.mouseY;
+                    let targetColor = 'rgba(255, 255, 255, 0.8)';
+                    
+                    this.targets.forEach(tgt => {
+                        if(tgt.alive && !tgt.isOccluded && tgt.screenX !== undefined && Math.hypot(tgt.screenX - this.mouseX, tgt.screenY - this.mouseY) < 30) {
+                            drawX += (tgt.screenX - drawX) * 0.4; drawY += (tgt.screenY - drawY) * 0.4; 
+                            targetColor = tgt.color;
+                        }
+                    });
+
+                    this.ctx.strokeStyle = targetColor; this.ctx.lineWidth = 1.5;
+                    this.ctx.beginPath(); this.ctx.arc(drawX, drawY, 2, 0, Math.PI * 2); this.ctx.stroke();
+                    this.ctx.beginPath(); this.ctx.arc(drawX, drawY, 18, 0, Math.PI * 2); this.ctx.stroke();
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(drawX - 25, drawY); this.ctx.lineTo(drawX - 8, drawY);
+                    this.ctx.moveTo(drawX + 8, drawY); this.ctx.lineTo(drawX + 25, drawY);
+                    this.ctx.moveTo(drawX, drawY - 25); this.ctx.lineTo(drawX, drawY - 8);
+                    this.ctx.moveTo(drawX, drawY + 8); this.ctx.lineTo(drawX, drawY + 25);
+                    this.ctx.stroke();
+                }
+
+                requestAnimationFrame(() => this.renderLoop());
+            }
+
+            log(msg) {
+                const logDiv = document.getElementById('comms-log');
+                const d = new Date(); const ts = `${d.getHours()}${d.getMinutes().toString().padStart(2,'0')} hrs`;
+                const el = document.createElement('div'); el.className = 'log-entry';
+                el.innerHTML = `<span class="log-time">${ts}</span> ${msg}`;
+                logDiv.prepend(el);
+            }
+        }
+
+        window.onload = () => { window.game = new USSAtlasGame(); };
+    </script>
+</body>
+</html>            background-size: 100% 4px, 100% 100%; pointer-events: none; z-index: 10;
         }
 
         canvas#tactical-display { width: 100%; height: 100%; display: block; }

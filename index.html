@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATLAS ORBITAL STATION - COMMAND</title>
+    <title>ATLAS ORBITAL STATION - COMMAND UPGRADE</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap');
 
@@ -130,6 +130,14 @@
         .flash-warn { animation: flashWarn 1s infinite; }
         @keyframes flashRed { 0% { background-color: rgba(255,51,51,0.1); } 50% { background-color: rgba(255,51,51,0.4); } 100% { background-color: rgba(255,51,51,0.1); } }
         @keyframes flashWarn { 0% { background-color: rgba(255,170,0,0.1); } 50% { background-color: rgba(255,170,0,0.4); } 100% { background-color: rgba(255,170,0,0.1); } }
+        
+        /* Squad Control Styles */
+        .squad-controls {
+            display: grid; 
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -137,9 +145,17 @@
         <div class="panel top-left">
             <div style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
                 <div class="header-bar">FIGHTER SQUADRON</div>
-                <div style="margin-bottom: 8px; display: flex; gap: 5px;">
-                    <button id="btn-deploy-squad" onclick="game.toggleSquadron()" style="flex: 1;" class="btn-white">LAUNCH WING</button>
+                
+                <!-- NEW: Squad Control Panel -->
+                <div class="squad-controls">
+                    <button id="btn-deploy-squad" onclick="game.launchFighter(2)" style="flex: 1; font-size: 0.75em;" class="btn-white">LAUNCH 2 (ASSAULT)</button>
+                    <button id="btn-patrol-squad" onclick="game.launchFighter(1)" style="flex: 1; font-size: 0.75em; border-color: var(--info-color); color: var(--info-color);" class="btn-info">PATROL (1)</button>
                 </div>
+
+                <div style="margin-bottom: 8px; text-align: center; font-size: 0.7em; color: #aaa;">
+                    [Click buttons above to launch fighters]
+                </div>
+
                 <div class="scroll-list" id="fighter-list"></div>
             </div>
             
@@ -306,11 +322,12 @@
                 ];
                 this.crewMissionActive = false; // Local planet foraging
 
-                // Fighter Squadron
+                // Fighter Squadron - Updated to include patrol state
                 this.fighters = Array.from({length: 6}, (_, i) => ({
                     id: i, callsign: `VIPER-${i+1}`, hp: 100, alive: true, 
                     x: 0, y: 0, z: 0, idleAngle: Math.random() * Math.PI * 2, target: null, 
-                    speed: 0.04, rebuilding: 0
+                    speed: 0.04, rebuilding: 0,
+                    patrolMode: false // NEW: Distinguishes aggressive vs defensive fighters
                 }));
                 this.fightersDeployed = false; // Local orbital defense
                 
@@ -385,7 +402,7 @@
 
                 document.getElementById('val-highscore').innerText = this.highScore;
 
-                this.log("Atlas Station Orbital Defenses Online.");
+                this.log("Atlas Station Orbital Defenses Online. Squadrons stand by.");
                 this.renderUI_Lists();
                 this.updateMissionUI();
 
@@ -605,7 +622,8 @@
                         this.fighters.forEach(f => {
                             if (f.alive && f.rebuilding <= 0) {
                                 fAlive = true;
-                                if (Math.random() < 0.2) f.hp -= (Math.random() * 4 + 1);
+                                // Mission damage is higher than patrol/defense
+                                if (Math.random() < 0.3) f.hp -= (Math.random() * 4 + 1); 
                                 if (f.hp <= 0) {
                                     f.hp = 0; f.alive = false;
                                     this.log(`<span class="log-alert">DISPATCH TRAGEDY: ${f.callsign} destroyed!</span>`);
@@ -778,6 +796,7 @@
                         f.rebuilding--;
                         if (f.rebuilding <= 0) {
                             f.hp = 100; f.alive = true;
+                            f.patrolMode = false; // Reset to default on rebuild
                             this.log(`<span class="log-info">Engineering: ${f.callsign} replica complete. Ready for launch.</span>`);
                             if (!this.fightersDeployed && document.getElementById('btn-deploy-squad')) {
                                 document.getElementById('btn-deploy-squad').disabled = false;
@@ -786,17 +805,35 @@
                     }
                 });
 
-                // FIGHTER AI (Target Selection)
+                // FIGHTER AI (Target Selection) - UPGRADED
                 this.fighters.forEach(f => {
-                    if (f.alive && this.fightersDeployed) {
+                    if (f.alive && f.rebuilding <= 0) {
                         let enemies = this.targets.filter(t => t.alive && t.faction === 'enemy');
-                        let smallEnemies = enemies.filter(t => !t.isCapital);
-                        let validTargets = smallEnemies.length > 0 ? smallEnemies : enemies;
                         
-                        if (validTargets.length > 0) {
-                            f.target = validTargets[Math.floor(Math.random() * validTargets.length)];
-                        } else {
-                            f.target = null;
+                        // PATROL LOGIC: Look for targets near station first
+                        if (f.patrolMode) {
+                            let nearbyEnemies = enemies.filter(e => e.screenX !== undefined && Math.hypot(e.screenX - this.shipX, e.screenY - this.shipY) < 200);
+                            if (nearbyEnemies.length > 0) {
+                                f.target = nearbyEnemies[0]; // Engage closest threat to base
+                            } else {
+                                // Return to idle patrol pattern near station
+                                f.idleAngle += 0.01;
+                                f.x = (this.globeRadius + 90) * Math.cos(f.idleAngle);
+                                f.y = (Math.sin(f.idleAngle * 2) * 30);
+                                f.z = (this.globeRadius + 90) * Math.sin(f.idleAngle);
+                                f.target = null;
+                            }
+                        } 
+                        // ASSAULT/DEFENSE LOGIC: Aggressive
+                        else {
+                            let smallEnemies = enemies.filter(t => !t.isCapital);
+                            let validTargets = smallEnemies.length > 0 ? smallEnemies : enemies;
+                            
+                            if (validTargets.length > 0) {
+                                f.target = validTargets[Math.floor(Math.random() * validTargets.length)];
+                            } else {
+                                f.target = null;
+                            }
                         }
                     }
                 });
@@ -879,7 +916,7 @@
                 let fightersAlive = false;
                 this.fighters.forEach(f => {
                     if (f.alive && f.rebuilding <= 0) {
-                        if (this.fightersDeployed) {
+                        if (this.fightersDeployed || f.patrolMode) { // Allow patrols to persist even if main squad recalled
                             fightersAlive = true;
                             f.hp -= (Math.random() * 2 + 1); 
                             
@@ -906,10 +943,15 @@
                     }
                 });
 
+                // Fix: Update UI for Patrol Mode status
+                const patrolBtn = document.getElementById('btn-patrol-squad');
                 if (this.fightersDeployed && !fightersAlive) {
                     this.fightersDeployed = false;
-                    const btn = document.getElementById('btn-deploy-squad');
-                    if (btn) { btn.innerText = "SQUADRON DESTROYED"; btn.disabled = true; }
+                    if(patrolBtn) patrolBtn.disabled = true; 
+                } else if (!this.fightersDeployed && fightersAlive) {
+                     // If we have fighters alive but not deployed, they must be in Patrol Mode
+                     const btn = document.getElementById('btn-deploy-squad');
+                     if(btn) { btn.innerText = "SQUADRON ON PATROL"; btn.disabled = true; }
                 }
 
                 // AWAY TEAM TICK
@@ -946,6 +988,78 @@
                 this.updateUI();
             }
 
+            // --- UPGRADE: Squad Launch Logic ---
+            launchFighter(count) {
+                if (this.missionState === 'ACTIVE' && this.activeMission && this.activeMission.type === 'SQUAD') {
+                    this.playSound('alert'); 
+                    this.log("<span class='log-alert'>COMMAND REFUSED: Squadron is currently on a sub-space dispatch!</span>"); 
+                    return;
+                }
+
+                // Count available fighters
+                const available = this.fighters.filter(f => f.alive && f.hp > 50 && f.rebuilding <= 0);
+                
+                if (available.length === 0) { 
+                    this.log("No flight-ready interceptors available. Check the repair queue."); 
+                    return; 
+                }
+
+                // Determine how many we can actually launch
+                const actualCount = Math.min(count, available.length);
+
+                // If launching "Assault" (2), deploy full squad
+                if (count === 2) {
+                    this.fightersDeployed = true;
+                    
+                    available.forEach((f, index) => {
+                        f.patrolMode = false;
+                        f.x = (Math.random() - 0.5) * 50;
+                        f.y = this.globeRadius + Math.random() * 50;
+                        f.z = (Math.random() - 0.5) * 50;
+                        f.idleAngle = Math.random() * Math.PI * 2;
+                        
+                        // Visual flair for the leader
+                        if (index === 0) {
+                            this.log(`<span class="log-info">Squadron Leader ${f.callsign} launching with wing.</span>`);
+                        } else {
+                             f.hp -= 1; // Minor wear and tear on launch
+                        }
+                    });
+
+                    const btn = document.getElementById('btn-deploy-squad');
+                    btn.innerText = "RECALL WING";
+                    btn.classList.remove('btn-white');
+                    btn.classList.add('btn-warn');
+
+                    this.log(`Squadron Leader: ${actualCount} Vipers are weapons free.`);
+                } 
+                // If launching "Patrol" (1)
+                else if (count === 1) {
+                    const leader = available[0];
+                    
+                    // Don't set the global flag, just this fighter's mode
+                    leader.patrolMode = true;
+                    
+                    // Position near station for patrol
+                    leader.x = this.globeRadius + 90;
+                    leader.y = 20;
+                    leader.z = 0;
+                    leader.idleAngle = Math.random() * Math.PI;
+
+                    const btn = document.getElementById('btn-patrol-squad');
+                    if (available.length === 1) {
+                        btn.disabled = true; 
+                        btn.innerText = "SINGLE PATROL ACTIVE";
+                    } else {
+                        btn.innerText = `PATROL (${available.length-1})`;
+                    }
+
+                    this.log(`<span class="log-info">Patrol Mode: ${leader.callsign} launching to scout orbital radius.</span>`);
+                }
+
+                this.renderUI_Lists();
+            }
+
             // --- SUB-SPACE MISSIONS LOGIC ---
             generateMission() {
                 const isSquad = Math.random() > 0.5;
@@ -979,14 +1093,19 @@
                     // If fighters are deployed, recall them for the mission
                     if (this.fightersDeployed) {
                         this.fightersDeployed = false;
+                        
+                        // Also recall any patrol fighters
+                        this.fighters.forEach(f => f.patrolMode = false);
+
                         const btn = document.getElementById('btn-deploy-squad');
                         if (btn) {
-                            btn.innerText = "SQUADRON ON DISPATCH";
+                            btn.innerText = "WING ON DISPATCH";
                             btn.className = "btn-warn";
                         }
                         this.log("Recalling fighters to base for mission deployment.");
                     } else {
-                        this.fightersDeployed = false; 
+                        // If they were just on patrol, bring them back
+                         this.fighters.forEach(f => f.patrolMode = false);
                     }
                 } else {
                     if (!this.crew.some(c => c.hp > 0)) {
@@ -1062,42 +1181,9 @@
                 }
             }
 
-            // --- LOCAL SQUADRON LOGIC ---
+            // --- LOCAL SQUADRON LOGIC (Legacy Support) ---
             toggleSquadron() {
-                if (this.missionState === 'ACTIVE' && this.activeMission && this.activeMission.type === 'SQUAD') {
-                    this.playSound('alert'); this.log("<span class='log-alert'>COMMAND REFUSED: Squadron is currently on a sub-space dispatch!</span>"); return;
-                }
-
-                const btn = document.getElementById('btn-deploy-squad');
-                if (!btn) return;
-
-                if (this.fightersDeployed) {
-                    this.fightersDeployed = false;
-                    btn.innerText = "LAUNCH WING";
-                    btn.classList.remove('btn-warn');
-                    btn.classList.add('btn-white');
-                    this.log("Squadron Leader: Vipers returning to base for refit.");
-                } else {
-                    const available = this.fighters.filter(f => f.alive && f.hp > 50 && f.rebuilding <= 0);
-                    if (available.length === 0) { this.log("No flight-ready interceptors available."); return; }
-                    
-                    this.fighters.forEach(f => {
-                        if (f.alive && f.hp > 50 && f.rebuilding <= 0) {
-                            f.x = (Math.random() - 0.5) * 50;
-                            f.y = this.globeRadius + Math.random() * 50;
-                            f.z = (Math.random() - 0.5) * 50;
-                            f.idleAngle = Math.random() * Math.PI * 2;
-                        }
-                    });
-
-                    this.fightersDeployed = true;
-                    btn.innerText = "RECALL WING";
-                    btn.classList.remove('btn-white');
-                    btn.classList.add('btn-warn');
-                    this.playSound('teleport');
-                    this.log("Squadron Leader: Vipers are weapons free. Engaging targets.");
-                }
-                this.renderUI_Lists();
+                this.launchFighter(2);
             }
 
             rebuildFighter(id) {
@@ -1161,8 +1247,33 @@
                         if (fOnMission) {
                             squadBtn.disabled = true; squadBtn.innerText = "WING ON DISPATCH"; squadBtn.className = "btn-warn";
                         } else {
-                            squadBtn.disabled = !this.fighters.some(f => f.alive);
+                            // Logic to determine button state based on active fighters
+                            const activeFighters = this.fighters.filter(f => f.alive && !f.rebuilding && (this.fightersDeployed || f.patrolMode)).length;
+                            if (activeFighters > 0) {
+                                squadBtn.disabled = true; 
+                                squadBtn.innerText = "WING ACTIVE"; 
+                                squadBtn.className = "btn-info";
+                            } else {
+                                squadBtn.disabled = !this.fighters.some(f => f.alive && f.rebuilding <= 0);
+                            }
                         }
+                    }
+
+                    const patrolBtn = document.getElementById('btn-patrol-squad');
+                    if (patrolBtn) {
+                         // If main squad is out, disable patrol
+                         if (this.fightersDeployed || fOnMission) {
+                             patrolBtn.disabled = true;
+                             patrolBtn.innerText = "DEPLOYMENT IN PROGRESS";
+                         } else {
+                             const availableForPatrol = this.fighters.filter(f => f.alive && !f.rebuilding).length;
+                             if (availableForPatrol === 0) {
+                                 patrolBtn.disabled = true;
+                                 patrolBtn.innerText = "NO AVAILABLE FIGHTERS";
+                             } else if (availableForPatrol === 1) {
+                                 patrolBtn.innerText = "PATROL (1)";
+                             }
+                         }
                     }
 
                     this.fighters.forEach(f => {
@@ -1171,15 +1282,42 @@
                         else if (f.hp < 60) color = '#ffaa00';
 
                         const isBuilding = f.rebuilding > 0;
-                        const statusTxt = isBuilding ? `BLD ${f.rebuilding}s` : (!f.alive ? 'DEST' : (fOnMission ? 'MSN' : (this.fightersDeployed ? 'CMBT' : 'DOCK')));
+                        
+                        // Distinguish Patrol Status
+                        let statusTxt = '';
+                        if (isBuilding) {
+                            statusTxt = `BLD ${f.rebuilding}s`;
+                        } else if (!f.alive) {
+                            statusTxt = 'DEST';
+                        } else if (fOnMission) {
+                            statusTxt = 'MSN';
+                        } else if (this.fightersDeployed) {
+                            statusTxt = 'CMBT'; // Combat/Assault
+                        } else if (f.patrolMode) {
+                            statusTxt = 'PATROL';
+                        } else {
+                            statusTxt = 'DOCK';
+                        }
+
                         const opacity = (!f.alive || isBuilding || fOnMission) ? '0.4' : '1.0';
+                        
+                        // Visual Indicator for Patrol Mode
+                        let patrolBadge = '';
+                        if (f.patrolMode && !fOnMission && f.alive) {
+                            patrolBadge = `<span style="font-size: 0.6em; color: var(--info-color); margin-left: 5px;">[P]</span>`;
+                        }
+
                         const btnHtml = (!f.alive && !isBuilding && !fOnMission) ? `<button class="btn-info" style="padding: 2px 4px; font-size: 0.6em;" onclick="game.rebuildFighter(${f.id})">REBUILD</button>` : '';
 
                         fList.innerHTML += `
                             <div class="list-item" style="opacity: ${opacity}; border-left-color: ${color};">
                                 <div style="flex-grow: 1;">
                                     <div style="display:flex; justify-content:space-between; font-weight:bold; color:${(!f.alive || isBuilding)?'#555':'#fff'}; font-size: 0.85em;">
-                                        <span>${f.callsign}</span> <span style="font-size:0.8em; color:${!f.alive && !isBuilding ?'#ff3333':color}">${statusTxt}</span>
+                                        <span>${f.callsign}</span> 
+                                        <div style="font-size:0.8em; color:${!f.alive && !isBuilding ?'#ff3333':color}">
+                                            ${statusTxt}
+                                            ${patrolBadge}
+                                        </div>
                                     </div>
                                     <div class="health-bar" style="width: calc(100% - 5px);"><div class="health-fill" style="width: ${f.hp}%; background-color: ${color};"></div></div>
                                 </div>
@@ -1253,17 +1391,9 @@
                 tgt.frozen = false;
                 const roll = Math.random();
                 
-                if (roll < 0.3) {
-                    tgt.faction = 'mystery'; tgt.color = '#ffaa00'; 
-                    this.playSound('alert');
-                    this.log(`<span class="log-warn">WARNING: Scan blocked! ${tgt.id} shielding resists deep scan.</span>`);
-                    
-                    this.pendingDecisionTarget = tgt;
-                    document.getElementById('ops-default').style.display = 'none';
-                    document.getElementById('ops-action').style.display = 'none';
-                    document.getElementById('ops-unidentified').style.display = 'flex';
-                    document.getElementById('ops-panel').classList.add('flash-warn');
-                } else if (roll < 0.6) {
+                // Fix #3: Refined Mystery Ship Logic
+                if (roll < 0.4) {
+                    // High chance of hostility
                     tgt.faction = 'enemy'; tgt.color = '#ff3333'; 
                     this.playSound('alert');
                     this.log(`<span class="log-alert">CRITICAL: ${tgt.id} is hostile! Contraband detected!</span>`);
@@ -1273,7 +1403,19 @@
                     document.getElementById('ops-unidentified').style.display = 'none';
                     document.getElementById('ops-action').style.display = 'flex';
                     document.getElementById('ops-panel').classList.add('flash-red');
+                } else if (roll < 0.7) {
+                    // Medium chance of mystery
+                    tgt.faction = 'mystery'; tgt.color = '#ffaa00'; 
+                    this.playSound('alert');
+                    this.log(`<span class="log-warn">WARNING: Scan blocked! ${tgt.id} shielding resists deep scan.</span>`);
+                    
+                    this.pendingDecisionTarget = tgt;
+                    document.getElementById('ops-default').style.display = 'none';
+                    document.getElementById('ops-action').style.display = 'none';
+                    document.getElementById('ops-unidentified').style.display = 'flex';
+                    document.getElementById('ops-panel').classList.add('flash-warn');
                 } else {
+                    // Low chance of friendly
                     tgt.faction = 'friendly'; tgt.color = '#39ff14'; 
                     this.log(`Scan complete. ${tgt.id} cleared for commerce.`);
                     document.getElementById('btn-tractor').disabled = false;
@@ -1670,19 +1812,35 @@
                 // 2. FOREGROUND LAYER 
                 this.ctx.globalCompositeOperation = 'source-over';
 
-                // FIGHTER SQUADRON RENDER & MOVE
+                // FIGHTER SQUADRON RENDER & MOVE - UPGRADED
                 this.ctx.globalAlpha = 1.0;
                 this.fighters.forEach(f => {
-                    if (f.alive && f.rebuilding <= 0 && this.fightersDeployed) {
+                    if (f.alive && f.rebuilding <= 0) {
                         let tx = 0, ty = 0, tz = 0;
-                        if (f.target && f.target.alive) {
-                            let c = this.get3DCoords(f.target);
-                            tx = c.x; ty = c.y; tz = c.z;
+                        
+                        // Logic based on mode
+                        if (f.patrolMode) {
+                            // If a patrol has an enemy target nearby, engage it
+                            if (!f.target || !f.target.alive) {
+                                f.idleAngle += 0.02;
+                                tx = (this.globeRadius + 90) * Math.cos(f.idleAngle);
+                                ty = Math.sin(f.idleAngle * 2) * 30;
+                                tz = (this.globeRadius + 90) * Math.sin(f.idleAngle);
+                            } else {
+                                let c = this.get3DCoords(f.target);
+                                tx = c.x; ty = c.y; tz = c.z;
+                            }
+                        } else if (f.target && f.target.alive && this.fightersDeployed) {
+                             let c = this.get3DCoords(f.target);
+                             tx = c.x; ty = c.y; tz = c.z;
                         } else {
-                            f.idleAngle += 0.02;
-                            tx = (this.globeRadius + 80) * Math.cos(f.idleAngle + f.id);
-                            ty = Math.sin(f.idleAngle * 2 + f.id) * 40;
-                            tz = (this.globeRadius + 80) * Math.sin(f.idleAngle + f.id);
+                            // Idle orbit for non-patrols when squad is recalled
+                            if (!this.fightersDeployed && !(this.missionState === 'ACTIVE' && this.activeMission.type === 'SQUAD')) {
+                                f.idleAngle += 0.02;
+                                tx = (this.globeRadius + 60) * Math.cos(f.idleAngle);
+                                ty = Math.sin(f.idleAngle * 1.5) * 40;
+                                tz = (this.globeRadius + 60) * Math.sin(f.idleAngle);
+                            }
                         }
 
                         if (!isNaN(tx) && !isNaN(ty) && !isNaN(tz)) {
@@ -1700,9 +1858,26 @@
                             const isOccluded = (p.depth > 0 && Math.hypot(p.px - cx, p.py - cy) < this.globeRadius * 0.8);
                             this.ctx.globalAlpha = isOccluded ? 0.2 : 1.0;
 
+                            // Visual Indicator for Patrol Mode
+                            if (f.patrolMode) {
+                                this.ctx.strokeStyle = 'rgba(51, 204, 255, 0.5)';
+                                this.ctx.lineWidth = 1;
+                                this.ctx.beginPath();
+                                this.ctx.arc(p.px, p.py, 15 * p.scale, 0, Math.PI*2);
+                                this.ctx.stroke();
+                            }
+
                             this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; this.ctx.lineWidth = 1; this.ctx.setLineDash([2, 4]);
                             this.ctx.beginPath(); this.ctx.moveTo(anchor.px, anchor.py); this.ctx.lineTo(p.px, p.py); this.ctx.stroke();
                             this.ctx.setLineDash([]);
+
+                            // Leader Visual
+                            if (this.fightersDeployed && f === this.fighters.filter(ft => ft.alive).sort((a,b) => a.id-b.id)[0]) {
+                                this.ctx.fillStyle = '#ff3333';
+                                this.ctx.beginPath();
+                                this.ctx.arc(p.px, p.py - 12 * p.scale, 3 * p.scale, 0, Math.PI*2);
+                                this.ctx.fill();
+                            }
 
                             this.ctx.fillStyle = '#ffffff'; this.ctx.strokeStyle = '#ffffff';
                             this.ctx.lineWidth = 1;

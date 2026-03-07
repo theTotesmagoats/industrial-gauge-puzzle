@@ -13,253 +13,185 @@
             --cyan-dim: rgba(0, 240, 255, 0.2);
             --amber: #ffb000;
             --crimson: #ff2a2a;
-            --grid-line: rgba(0, 240, 255, 0.1);
+            --grid-line: rgba(0, 240, 255, 0.05);
         }
 
         body {
-            margin: 0;
-            background-color: var(--bg-base);
-            color: var(--cyan);
-            font-family: 'Share Tech Mono', monospace;
-            height: 100vh;
-            overflow: hidden;
+            margin: 0; background-color: var(--bg-base); color: var(--cyan);
+            font-family: 'Share Tech Mono', monospace; height: 100vh; overflow: hidden;
             user-select: none;
             background-image: 
                 linear-gradient(var(--grid-line) 1px, transparent 1px),
                 linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-            background-size: 30px 30px;
+            background-size: 40px 40px;
         }
 
-        /* CRT Overlay & Scanlines */
         body::after {
-            content: " ";
-            display: block;
-            position: absolute;
+            content: " "; display: block; position: absolute;
             top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            z-index: 2;
-            background-size: 100% 2px, 3px 100%;
-            pointer-events: none;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2; background-size: 100% 2px, 3px 100%; pointer-events: none;
         }
 
         .layout {
-            display: grid;
-            grid-template-columns: 300px 1fr 350px;
-            grid-template-rows: 60px 1fr 200px;
-            gap: 15px;
-            padding: 15px;
-            height: 100vh;
-            box-sizing: border-box;
-            position: relative;
-            z-index: 3;
+            display: grid; grid-template-columns: 320px 1fr 320px; grid-template-rows: 60px 1fr;
+            gap: 15px; padding: 15px; height: 100vh; box-sizing: border-box; position: relative; z-index: 3;
         }
 
         .header {
-            grid-column: 1 / -1;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid var(--cyan);
-            padding-bottom: 10px;
+            grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px solid var(--cyan); padding-bottom: 10px;
         }
 
         h1 {
-            font-family: 'Rajdhani', sans-serif;
-            margin: 0;
-            font-size: 32px;
-            letter-spacing: 4px;
-            text-shadow: 0 0 10px var(--cyan);
-            display: flex;
-            align-items: center;
-            gap: 15px;
+            font-family: 'Rajdhani', sans-serif; margin: 0; font-size: 32px; letter-spacing: 4px;
+            text-shadow: 0 0 10px var(--cyan); display: flex; align-items: center; gap: 15px;
         }
 
         .alert-badge {
-            background: var(--amber);
-            color: #000;
-            padding: 2px 8px;
-            font-size: 14px;
-            border-radius: 2px;
-            animation: pulse 2s infinite;
+            background: var(--crimson); color: #fff; padding: 2px 8px; font-size: 14px;
+            border-radius: 2px; animation: pulse 1s infinite; font-weight: bold; text-shadow: none;
         }
 
-        .mfd { /* Multi-Function Display */
-            background: var(--panel-bg);
-            border: 1px solid var(--cyan-dim);
-            box-shadow: inset 0 0 20px rgba(0, 240, 255, 0.05);
-            position: relative;
-            display: flex;
-            flex-direction: column;
+        .mfd {
+            background: var(--panel-bg); border: 1px solid var(--cyan-dim);
+            box-shadow: inset 0 0 20px rgba(0, 240, 255, 0.05); position: relative;
+            display: flex; flex-direction: column;
         }
-
-        /* Sci-Fi Corner Cuts */
         .mfd::before {
-            content: '';
-            position: absolute;
-            top: -1px; left: -1px;
-            width: 15px; height: 15px;
-            border-top: 2px solid var(--cyan);
-            border-left: 2px solid var(--cyan);
+            content: ''; position: absolute; top: -1px; left: -1px; width: 15px; height: 15px;
+            border-top: 2px solid var(--cyan); border-left: 2px solid var(--cyan);
         }
         .mfd::after {
-            content: '';
-            position: absolute;
-            bottom: -1px; right: -1px;
-            width: 15px; height: 15px;
-            border-bottom: 2px solid var(--cyan);
-            border-right: 2px solid var(--cyan);
+            content: ''; position: absolute; bottom: -1px; right: -1px; width: 15px; height: 15px;
+            border-bottom: 2px solid var(--cyan); border-right: 2px solid var(--cyan);
         }
 
         .mfd-title {
-            font-family: 'Rajdhani', sans-serif;
-            background: var(--cyan-dim);
-            padding: 4px 10px;
-            font-size: 14px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            border-bottom: 1px solid var(--cyan);
+            font-family: 'Rajdhani', sans-serif; background: var(--cyan-dim); padding: 6px 10px;
+            font-size: 15px; letter-spacing: 2px; text-transform: uppercase; border-bottom: 1px solid var(--cyan);
+            font-weight: bold;
         }
 
-        .data-list {
-            padding: 10px;
-            font-size: 12px;
-            flex-grow: 1;
-            overflow: hidden;
-        }
-
-        .data-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            border-bottom: 1px dashed rgba(0, 240, 255, 0.2);
-        }
-
+        .data-list { padding: 15px; font-size: 13px; display: flex; flex-direction: column; gap: 8px; }
+        .data-row { display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(0, 240, 255, 0.2); padding-bottom: 4px; }
         .val { color: #fff; text-shadow: 0 0 5px #fff; }
+        .val.alert { color: var(--crimson); text-shadow: 0 0 5px var(--crimson); }
 
-        /* Power Routing Bars */
-        .power-routing { padding: 15px; display: flex; flex-direction: column; gap: 15px; }
-        .sys-label { font-size: 11px; margin-bottom: 4px; display: flex; justify-content: space-between; }
-        .bar-bg { width: 100%; height: 12px; background: #000; border: 1px solid var(--cyan-dim); cursor: pointer;}
-        .bar-fill { height: 100%; background: var(--cyan); transition: width 0.1s ease; }
+        .power-routing { padding: 15px; display: flex; flex-direction: column; gap: 18px; }
+        .sys-label { font-size: 12px; margin-bottom: 6px; display: flex; justify-content: space-between; }
+        .bar-bg { width: 100%; height: 14px; background: #050a0f; border: 1px solid var(--cyan-dim); position: relative; cursor: ew-resize; }
+        .bar-fill { height: 100%; background: var(--cyan); pointer-events: none; transition: width 0.1s; }
         .bar-fill.wep { background: var(--crimson); }
         .bar-fill.eng { background: var(--amber); }
+        .bar-thumb { position: absolute; top: -4px; width: 6px; height: 22px; background: #fff; pointer-events: none; box-shadow: 0 0 5px #fff; transition: left 0.1s; }
 
-        /* Central Canvas */
-        #nav-canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-        .center-mfd { grid-row: 2 / 4; grid-column: 2; border: 1px solid var(--cyan); }
+        #nav-canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+        .center-mfd { grid-row: 2; grid-column: 2; border: 1px solid var(--cyan); }
 
-        /* Hex Stream Log */
-        .hex-log {
-            font-size: 10px;
-            color: var(--amber);
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 5px;
-            padding: 10px;
-            opacity: 0.8;
-        }
+        .right-panel { display: grid; grid-template-rows: 1fr auto; gap: 15px; }
 
-        /* Interactive Button */
+        .action-grid { display: flex; flex-direction: column; gap: 10px; padding: 15px; }
+        
         .exec-btn {
-            background: transparent;
-            border: 1px solid var(--crimson);
-            color: var(--crimson);
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 20px;
-            font-weight: bold;
-            letter-spacing: 4px;
-            padding: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-transform: uppercase;
-            width: 100%;
-            height: 100%;
+            background: rgba(255, 42, 42, 0.1); border: 1px solid var(--crimson); color: var(--crimson);
+            font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: bold; letter-spacing: 4px;
+            padding: 15px; cursor: pointer; transition: all 0.2s; text-transform: uppercase;
         }
         .exec-btn:hover { background: var(--crimson); color: #000; box-shadow: 0 0 20px var(--crimson); }
         .exec-btn:active { transform: scale(0.98); }
+        .exec-btn:disabled { border-color: #555; color: #555; background: transparent; cursor: not-allowed; box-shadow: none; }
 
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .warp-btn { border-color: var(--amber); color: var(--amber); background: rgba(255, 176, 0, 0.1); }
+        .warp-btn:hover { background: var(--amber); color: #000; box-shadow: 0 0 20px var(--amber); }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
 <div class="layout">
     <div class="header">
-        <h1>[ <span style="color: #fff;">USSC VANGUARD</span> ] TACTICAL BRIDGE <span class="alert-badge">DEFCON 2</span></h1>
+        <h1>[ <span style="color: #fff;">USSC VANGUARD</span> ] TACTICAL BRIDGE <span class="alert-badge">HOSTILE CONTACTS</span></h1>
         <div style="text-align: right; font-size: 18px;">
             <div id="sys-clock">00:00:00 UTC</div>
-            <div style="font-size: 12px; color: var(--amber);">ORBITAL INCLINATION: 42.5°</div>
+            <div style="font-size: 12px; color: var(--amber);">SYS: NOMINAL | LOC: ORBITAL</div>
         </div>
     </div>
 
-    <div class="mfd" style="grid-row: 2 / 4; grid-column: 1;">
+    <div class="mfd">
         <div class="mfd-title">VESSEL TELEMETRY</div>
         <div class="data-list">
             <div class="data-row"><span>VELOCITY</span><span class="val" id="vel">24,532 km/h</span></div>
             <div class="data-row"><span>ALTITUDE</span><span class="val" id="alt">408.2 km</span></div>
-            <div class="data-row"><span>HEADING</span><span class="val" id="hdg">045.2° TRU</span></div>
-            <div class="data-row"><span>PITCH</span><span class="val" id="pit">+12.4°</span></div>
-            <div class="data-row"><span>YAW</span><span class="val" id="yaw">-02.1°</span></div>
-            <div class="data-row"><span>ROLL</span><span class="val" id="rol">00.0°</span></div>
+            <div class="data-row"><span>HULL INTEGRITY</span><span class="val">100%</span></div>
         </div>
 
-        <div class="mfd-title" style="margin-top: auto;">POWER ROUTING</div>
+        <div class="mfd-title" style="margin-top: 20px;">POWER ROUTING</div>
         <div class="power-routing">
             <div>
-                <div class="sys-label"><span style="color: var(--cyan);">SHIELDS</span><span id="pwr-shd">100%</span></div>
-                <div class="bar-bg" onclick="setPower('shd', event)"><div class="bar-fill" id="bar-shd" style="width: 100%;"></div></div>
+                <div class="sys-label"><span style="color: var(--cyan);">DEFLECTORS</span><span id="pwr-val-shd">100%</span></div>
+                <div class="bar-bg" onmousedown="startDrag('shd', event)"><div class="bar-fill" id="bar-shd" style="width: 100%;"></div><div class="bar-thumb" id="thumb-shd" style="left: 100%;"></div></div>
             </div>
             <div>
-                <div class="sys-label"><span style="color: var(--amber);">ENGINES</span><span id="pwr-eng">60%</span></div>
-                <div class="bar-bg" onclick="setPower('eng', event)"><div class="bar-fill eng" id="bar-eng" style="width: 60%;"></div></div>
+                <div class="sys-label"><span style="color: var(--amber);">IMPULSE DRIVE</span><span id="pwr-val-eng">60%</span></div>
+                <div class="bar-bg" onmousedown="startDrag('eng', event)"><div class="bar-fill eng" id="bar-eng" style="width: 60%;"></div><div class="bar-thumb" id="thumb-eng" style="left: 60%;"></div></div>
             </div>
             <div>
-                <div class="sys-label"><span style="color: var(--crimson);">WEAPONS</span><span id="pwr-wep">30%</span></div>
-                <div class="bar-bg" onclick="setPower('wep', event)"><div class="bar-fill wep" id="bar-wep" style="width: 30%;"></div></div>
+                <div class="sys-label"><span style="color: var(--crimson);">PARTICLE CANNON</span><span id="pwr-val-wep">80%</span></div>
+                <div class="bar-bg" onmousedown="startDrag('wep', event)"><div class="bar-fill wep" id="bar-wep" style="width: 80%;"></div><div class="bar-thumb" id="thumb-wep" style="left: 80%;"></div></div>
             </div>
         </div>
     </div>
 
     <div class="mfd center-mfd">
-        <div class="mfd-title" style="position: absolute; z-index: 10; border: none; background: transparent;">MAIN SENSOR ARRAY [3D PROJECTION]</div>
+        <div class="mfd-title" style="position: absolute; z-index: 10; border: none; background: transparent;">TACTICAL PROJECTION MATRIX</div>
         <canvas id="nav-canvas"></canvas>
     </div>
 
-    <div class="mfd" style="grid-row: 2; grid-column: 3;">
-        <div class="mfd-title">SYSTEM MEMORY DUMP</div>
-        <div class="hex-log" id="hex-container">
+    <div class="right-panel">
+        <div class="mfd">
+            <div class="mfd-title" style="color: var(--amber); border-color: var(--amber); background: rgba(255, 176, 0, 0.1);">TARGETING COMPUTER</div>
+            <div class="data-list" id="tgt-info">
+                <div style="text-align: center; color: #555; margin-top: 40px;">[ NO TARGET LOCKED ]<br>CLICK RADAR TO ACQUIRE</div>
             </div>
-    </div>
+        </div>
 
-    <div class="mfd" style="grid-row: 3; grid-column: 3; justify-content: center; align-items: center; padding: 20px;">
-        <button class="exec-btn" id="warp-btn">INITIALIZE<br>BURN VECTOR</button>
+        <div class="mfd">
+            <div class="mfd-title" style="border-bottom: none;">ORDNANCE CONTROL</div>
+            <div class="action-grid">
+                <button class="exec-btn" id="fire-btn" disabled>FIRE PARTICLE CANNON</button>
+                <button class="exec-btn warp-btn" id="warp-btn">INITIALIZE BURN VECTOR</button>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
-    // --- CANVAS 3D ENGINE ---
+    // --- ENGINE CORE ---
     const canvas = document.getElementById('nav-canvas');
     const ctx = canvas.getContext('2d');
     
-    function resizeCanvas() {
-        canvas.width = canvas.clientWidth;
-        canvas.height = canvas.clientHeight;
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    function resizeCanvas() { canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight; }
+    window.addEventListener('resize', resizeCanvas); resizeCanvas();
 
-    // 3D Planet Variables
+    // 3D Math Constants
+    const R = 180; // Planet Radius
+    let angleX = 0.3, angleY = 0;
+    
+    // State
     const nodes = [];
-    const R = 150; // Radius of wireframe sphere
-    let angleX = 0, angleY = 0;
+    let targets = [];
+    const particles = [];
+    const beams = [];
+    
     let isWarping = false;
     let warpSpeed = 0;
+    let lockedTarget = null;
+    let weaponPower = 80;
 
-    // Generate Sphere Nodes (Math for your son: Spherical to Cartesian coordinates)
+    // Build Wireframe Sphere
     for (let lat = -90; lat <= 90; lat += 15) {
         for (let lon = 0; lon < 360; lon += 15) {
             const latRad = lat * (Math.PI / 180);
@@ -267,103 +199,255 @@
             nodes.push({
                 x: R * Math.cos(latRad) * Math.cos(lonRad),
                 y: R * Math.sin(latRad),
-                z: R * Math.cos(latRad) * Math.sin(lonRad),
-                baseLat: lat, baseLon: lon
+                z: R * Math.cos(latRad) * Math.sin(lonRad)
             });
         }
     }
 
-    // Engine Loop
+    // Generate Enemy Targets
+    function spawnTargets() {
+        for(let i=0; i<4; i++) {
+            targets.push({
+                id: 'TGT-' + Math.floor(Math.random()*8999 + 1000),
+                orbitAlt: R + 60 + Math.random() * 80,
+                angle: Math.random() * Math.PI * 2,
+                speed: (Math.random() * 0.02 + 0.01) * (Math.random() > 0.5 ? 1 : -1),
+                inclination: (Math.random() - 0.5) * 1.5,
+                alive: true
+            });
+        }
+    }
+    spawnTargets();
+
+    // 3D to 2D Projection Function
+    function project3D(x, y, z, cx, cy, cosX, sinX, cosY, sinY) {
+        let x1 = x * cosY - z * sinY;
+        let z1 = z * cosY + x * sinY;
+        let y2 = y * cosX - z1 * sinX;
+        let z2 = z1 * cosX + y * sinX;
+        
+        const scale = 400 / (400 + z2);
+        return { px: cx + x1 * scale, py: cy + y2 * scale, scale: scale, depth: z2 };
+    }
+
+    // --- MAIN RENDER LOOP ---
     function animate() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const cx = canvas.width / 2;
-        const cy = canvas.height / 2;
+        const cx = canvas.width / 2; const cy = canvas.height / 2;
 
-        // Tactical Grid
-        ctx.strokeStyle = 'rgba(0, 240, 255, 0.1)';
-        ctx.beginPath();
-        ctx.arc(cx, cy, R + 50, 0, Math.PI * 2);
-        ctx.arc(cx, cy, R + 100, 0, Math.PI * 2);
-        ctx.moveTo(cx, 0); ctx.lineTo(cx, canvas.height);
-        ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy);
-        ctx.stroke();
+        // Grid Background
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.05)';
+        ctx.beginPath(); ctx.arc(cx, cy, R + 80, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, canvas.height); ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy); ctx.stroke();
 
-        // 3D Rotation Matrices
-        angleY += isWarping ? 0.05 : 0.005; 
-        angleX = 0.3; // Slight tilt
-        
+        // Rotation Math
+        angleY += isWarping ? 0.05 : 0.003;
         const cosX = Math.cos(angleX), sinX = Math.sin(angleX);
         const cosY = Math.cos(angleY), sinY = Math.sin(angleY);
 
+        // 1. Draw Planet Nodes
         ctx.fillStyle = isWarping ? '#fff' : '#00f0ff';
-        
-        // Draw Nodes
         nodes.forEach(n => {
-            // Rotate Y
-            let x1 = n.x * cosY - n.z * sinY;
-            let z1 = n.z * cosY + n.x * sinY;
-            // Rotate X
-            let y2 = n.y * cosX - z1 * sinX;
-            let z2 = z1 * cosX + n.y * sinX;
+            const p = project3D(n.x, n.y, n.z, cx, cy, cosX, sinX, cosY, sinY);
+            ctx.globalAlpha = p.depth > 0 ? (isWarping ? Math.random() : 0.15) : (isWarping ? 1.0 : 0.8);
+            ctx.fillRect(p.px, p.py, 2, 2);
 
-            // Perspective Projection
-            const scale = 300 / (300 + z2);
-            const px = cx + x1 * scale;
-            const py = cy + y2 * scale;
-
-            // Back-face culling (fade points on the back of the sphere)
-            if (z2 < 0) {
-                ctx.globalAlpha = 0.2;
-            } else {
-                ctx.globalAlpha = isWarping ? Math.random() : 0.8;
-            }
-
-            // Draw Point
-            ctx.fillRect(px, py, 2, 2);
-
-            // Warp lines effect
-            if (isWarping && z2 > 0) {
+            if (isWarping && p.depth < 0) {
                 ctx.strokeStyle = 'rgba(255, 42, 42, 0.5)';
-                ctx.beginPath();
-                ctx.moveTo(px, py);
-                ctx.lineTo(px + (x1 * scale * warpSpeed), py + (y2 * scale * warpSpeed));
-                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(p.px, p.py);
+                const pTail = project3D(n.x, n.y, n.z - warpSpeed*10, cx, cy, cosX, sinX, cosY, sinY);
+                ctx.lineTo(pTail.px, pTail.py); ctx.stroke();
             }
         });
-        
-        ctx.globalAlpha = 1.0;
 
-        // Draw Targeting Reticle
-        ctx.strokeStyle = 'var(--amber)';
-        ctx.lineWidth = 1;
-        const s = Math.sin(Date.now() / 500) * 10 + 30; // Pulsing square
-        ctx.strokeRect(cx - s, cy - s, s*2, s*2);
-        
-        // Update Telemetry Text Jitter
+        // 2. Update & Draw Targets
+        targets.forEach(tgt => {
+            if(!tgt.alive) return;
+            
+            tgt.angle += tgt.speed;
+            
+            // Cartesian coordinates of the target based on its orbit
+            const tx = tgt.orbitAlt * Math.cos(tgt.angle);
+            const ty = tgt.orbitAlt * Math.sin(tgt.angle) * tgt.inclination;
+            const tz = tgt.orbitAlt * Math.sin(tgt.angle);
+
+            const p = project3D(tx, ty, tz, cx, cy, cosX, sinX, cosY, sinY);
+            tgt.screenX = p.px; tgt.screenY = p.py; tgt.depth = p.depth;
+
+            // Draw target if it's in front of the planet or on the edges
+            if (p.depth < 0 || Math.hypot(tx, ty) > R) {
+                ctx.globalAlpha = 1.0;
+                
+                // Target Icon (Triangle)
+                ctx.strokeStyle = '#ff2a2a'; ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(p.px, p.py - 6); ctx.lineTo(p.px + 6, p.py + 6); ctx.lineTo(p.px - 6, p.py + 6); ctx.closePath();
+                ctx.stroke();
+
+                // ID Label
+                ctx.fillStyle = '#ff2a2a'; ctx.font = "10px monospace";
+                ctx.fillText(tgt.id, p.px + 10, p.py);
+
+                // Lock-on Reticle
+                if (lockedTarget === tgt) {
+                    ctx.strokeStyle = 'var(--amber)';
+                    const s = Math.sin(Date.now() / 200) * 4 + 14;
+                    ctx.strokeRect(p.px - s/2, p.py - s/2, s, s);
+                    
+                    // Draw vector from ship (bottom center)
+                    ctx.strokeStyle = 'rgba(255, 176, 0, 0.2)'; ctx.setLineDash([4, 4]);
+                    ctx.beginPath(); ctx.moveTo(cx, canvas.height); ctx.lineTo(p.px, p.py); ctx.stroke(); ctx.setLineDash([]);
+                }
+            }
+        });
+
+        // 3. Draw Beams
+        beams.forEach((beam, index) => {
+            beam.progress += 0.08; // Beam speed
+            
+            if (beam.progress >= 1) {
+                // Impact!
+                createExplosion(beam.target.screenX, beam.target.screenY);
+                beam.target.alive = false;
+                if(lockedTarget === beam.target) clearLock();
+                beams.splice(index, 1);
+                return;
+            }
+
+            const bx = cx + (beam.target.screenX - cx) * beam.progress;
+            const by = canvas.height + (beam.target.screenY - canvas.height) * beam.progress;
+
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 4;
+            ctx.shadowBlur = 10; ctx.shadowColor = 'var(--crimson)';
+            ctx.beginPath(); ctx.moveTo(cx, canvas.height); ctx.lineTo(bx, by); ctx.stroke();
+            ctx.shadowBlur = 0;
+        });
+
+        // 4. Draw Particles (Explosions)
+        ctx.globalAlpha = 1.0;
+        particles.forEach((pt, index) => {
+            pt.x += pt.vx; pt.y += pt.vy; pt.life -= 0.02;
+            if (pt.life <= 0) { particles.splice(index, 1); return; }
+            
+            ctx.fillStyle = `rgba(255, ${Math.floor(pt.life*255)}, 42, ${pt.life})`;
+            ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.size * pt.life, 0, Math.PI*2); ctx.fill();
+        });
+
+        // Dynamic Telemetry Update
         if (!isWarping && Math.random() > 0.8) {
             document.getElementById('alt').innerText = (408.0 + Math.random()).toFixed(1) + " km";
             document.getElementById('vel').innerText = (24530 + Math.random()*5).toFixed(0) + " km/h";
-        } else if (isWarping) {
-            warpSpeed = Math.min(warpSpeed + 0.1, 5);
-            document.getElementById('vel').innerText = "C-FRACTIONAL";
-            document.getElementById('vel').style.color = "var(--crimson)";
         }
 
         requestAnimationFrame(animate);
     }
 
-    // --- SYSTEMS LOGIC ---
-    
-    // Hex Log Generator
-    const hexContainer = document.getElementById('hex-container');
-    function updateHex() {
-        let out = "";
-        for(let i=0; i<48; i++) {
-            out += `<div>0x${Math.floor(Math.random()*65535).toString(16).padStart(4, '0')}</div>`;
+    // --- INTERACTION LOGIC ---
+
+    // Raycast / Click to Lock
+    canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left; const my = e.clientY - rect.top;
+        
+        let hit = null; let minDist = 20; // 20px hit radius
+
+        targets.forEach(tgt => {
+            if(!tgt.alive || tgt.depth > 0) return; // Ignore dead or occluded targets
+            const dist = Math.hypot(tgt.screenX - mx, tgt.screenY - my);
+            if (dist < minDist) { minDist = dist; hit = tgt; }
+        });
+
+        if (hit) {
+            lockedTarget = hit;
+            document.getElementById('fire-btn').disabled = false;
+            updateTargetUI();
+        } else {
+            clearLock();
         }
-        hexContainer.innerHTML = out;
+    });
+
+    function clearLock() {
+        lockedTarget = null;
+        document.getElementById('fire-btn').disabled = true;
+        document.getElementById('tgt-info').innerHTML = '<div style="text-align: center; color: #555; margin-top: 40px;">[ NO TARGET LOCKED ]<br>CLICK RADAR TO ACQUIRE</div>';
     }
-    setInterval(updateHex, 150);
+
+    function updateTargetUI() {
+        if(!lockedTarget) return;
+        document.getElementById('tgt-info').innerHTML = `
+            <div class="data-row"><span>TRACKING ID</span><span class="val alert">${lockedTarget.id}</span></div>
+            <div class="data-row"><span>ORBITAL ALT</span><span class="val">${Math.floor(lockedTarget.orbitAlt * 12.5)} km</span></div>
+            <div class="data-row"><span>RELATIVE VEL</span><span class="val">${Math.floor(Math.abs(lockedTarget.speed) * 50000)} m/s</span></div>
+            <div class="data-row"><span>THREAT LVL</span><span class="val alert">MAXIMUM</span></div>
+            <div class="data-row" style="margin-top: 10px; color: var(--amber);">>> WEAPON TRACKING ALIGNED</div>
+        `;
+    }
+
+    // Fire Weapon
+    document.getElementById('fire-btn').addEventListener('click', () => {
+        if (lockedTarget && weaponPower >= 20) {
+            beams.push({ target: lockedTarget, progress: 0 });
+            // Deplete weapon capacitor slightly
+            weaponPower -= 20;
+            updatePowerVisuals('wep', weaponPower);
+        }
+    });
+
+    // Particle Generator
+    function createExplosion(sx, sy) {
+        for(let i=0; i<30; i++) {
+            particles.push({
+                x: sx, y: sy,
+                vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8,
+                life: 1.0, size: Math.random() * 4 + 2
+            });
+        }
+        
+        // Spawn a new target to keep the game going
+        setTimeout(spawnTargets, 2000);
+    }
+
+    // Power Routing Sliders
+    let activeSlider = null;
+    function startDrag(sys, e) {
+        activeSlider = sys; document.addEventListener('mousemove', drag); document.addEventListener('mouseup', stopDrag);
+        drag(e); // Trigger initial click
+    }
+    function drag(e) {
+        if(!activeSlider) return;
+        const bg = document.getElementById(`bar-${activeSlider}`).parentElement;
+        const rect = bg.getBoundingClientRect();
+        let percent = ((e.clientX - rect.left) / rect.width) * 100;
+        percent = Math.max(5, Math.min(100, percent));
+        
+        if(activeSlider === 'wep') weaponPower = percent; // Store weapon state
+
+        updatePowerVisuals(activeSlider, percent);
+    }
+    function updatePowerVisuals(sys, percent) {
+        document.getElementById(`bar-${sys}`).style.width = percent + '%';
+        document.getElementById(`thumb-${sys}`).style.left = `calc(${percent}% - 3px)`;
+        document.getElementById(`pwr-val-${sys}`).innerText = Math.floor(percent) + '%';
+        
+        // Disable firing if power is too low
+        if(sys === 'wep' && percent < 20 && lockedTarget) document.getElementById('fire-btn').disabled = true;
+        if(sys === 'wep' && percent >= 20 && lockedTarget) document.getElementById('fire-btn').disabled = false;
+    }
+    function stopDrag() { activeSlider = null; document.removeEventListener('mousemove', drag); document.removeEventListener('mouseup', stopDrag); }
+
+    // Warp Button
+    const wBtn = document.getElementById('warp-btn');
+    wBtn.addEventListener('mousedown', () => {
+        isWarping = true; wBtn.innerText = "VECTOR LOCKED\nBURNING..."; wBtn.style.color = "#000"; wBtn.style.background = "var(--amber)";
+    });
+    wBtn.addEventListener('mouseup', stopWarp);
+    wBtn.addEventListener('mouseleave', stopWarp);
+    
+    function stopWarp() {
+        isWarping = false; warpSpeed = 0;
+        wBtn.innerText = "INITIALIZE BURN VECTOR"; wBtn.style.color = "var(--amber)"; wBtn.style.background = "rgba(255, 176, 0, 0.1)";
+        document.getElementById('vel').style.color = "#fff";
+    }
 
     // Clock
     setInterval(() => {
@@ -371,33 +455,7 @@
         document.getElementById('sys-clock').innerText = d.toISOString().split('T')[1].split('.')[0] + " UTC";
     }, 1000);
 
-    // Interactive Power Routing
-    window.setPower = function(sys, e) {
-        const rect = e.currentTarget.getBoundingClientRect();
-        const percent = Math.max(5, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-        document.getElementById(`bar-${sys}`).style.width = percent + '%';
-        document.getElementById(`pwr-${sys}`).innerText = Math.floor(percent) + '%';
-    }
-
-    // Burn Action
-    const btn = document.getElementById('warp-btn');
-    btn.addEventListener('mousedown', () => {
-        isWarping = true;
-        btn.innerText = "VECTOR LOCKED\nBURNING...";
-        btn.style.color = "#000";
-        btn.style.background = "var(--crimson)";
-    });
-    btn.addEventListener('mouseup', () => {
-        isWarping = false;
-        warpSpeed = 0;
-        btn.innerText = "INITIALIZE\nBURN VECTOR";
-        btn.style.color = "var(--crimson)";
-        btn.style.background = "transparent";
-        document.getElementById('vel').style.color = "#fff";
-    });
-    btn.addEventListener('mouseleave', () => { isWarping = false; warpSpeed = 0; btn.style.background = "transparent"; document.getElementById('vel').style.color = "#fff"; btn.innerText = "INITIALIZE\nBURN VECTOR"; });
-
-    // Init
+    // Start
     animate();
 </script>
 </body>

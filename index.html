@@ -53,6 +53,7 @@
             background: var(--crimson); color: #fff; padding: 2px 8px; font-size: 14px;
             border-radius: 2px; animation: pulse 1s infinite; font-weight: bold;
         }
+        .alert-badge.away { background: var(--amber); color: #000; }
 
         .mfd {
             background: var(--panel-bg); border: 1px solid var(--cyan-dim);
@@ -71,23 +72,23 @@
         .mfd-title {
             font-family: 'Rajdhani', sans-serif; background: var(--cyan-dim); padding: 6px 10px;
             font-size: 15px; letter-spacing: 2px; text-transform: uppercase; border-bottom: 1px solid var(--cyan);
-            font-weight: bold;
+            font-weight: bold; flex-shrink: 0;
         }
 
-        .data-list { padding: 15px; font-size: 13px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+        .data-list { padding: 12px; font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
         .data-row { display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(0, 240, 255, 0.2); padding-bottom: 4px; }
         .val { color: #fff; text-shadow: 0 0 5px #fff; }
         .val.alert { color: var(--crimson); text-shadow: 0 0 5px var(--crimson); }
 
-        .power-routing { padding: 15px; display: flex; flex-direction: column; gap: 18px; }
-        .sys-label { font-size: 12px; margin-bottom: 6px; display: flex; justify-content: space-between; }
-        .bar-bg { width: 100%; height: 14px; background: #050a0f; border: 1px solid var(--cyan-dim); position: relative; cursor: ew-resize; }
+        .power-routing { padding: 12px; display: flex; flex-direction: column; gap: 14px; }
+        .sys-label { font-size: 11px; margin-bottom: 4px; display: flex; justify-content: space-between; }
+        .bar-bg { width: 100%; height: 10px; background: #050a0f; border: 1px solid var(--cyan-dim); position: relative; cursor: ew-resize; }
         .bar-fill { height: 100%; background: var(--cyan); pointer-events: none; transition: width 0.1s; }
         .bar-fill.wep { background: var(--crimson); }
         .bar-fill.eng { background: var(--amber); }
-        .bar-thumb { position: absolute; top: -4px; width: 6px; height: 22px; background: #fff; pointer-events: none; box-shadow: 0 0 5px #fff; transition: left 0.1s; }
+        .bar-thumb { position: absolute; top: -3px; width: 4px; height: 16px; background: #fff; pointer-events: none; box-shadow: 0 0 5px #fff; transition: left 0.1s; }
 
-        /* Hides the default cursor over the tactical map */
+        /* Canvas hides default cursor for custom reticle */
         #nav-canvas { width: 100%; height: 100%; display: block; cursor: none; }
         .center-mfd { grid-row: 2; grid-column: 2; border: 1px solid var(--cyan); }
 
@@ -105,6 +106,9 @@
 
         .warp-btn { border-color: var(--amber); color: var(--amber); background: rgba(255, 176, 0, 0.1); }
         .warp-btn:hover { background: var(--amber); color: #000; box-shadow: 0 0 20px var(--amber); }
+        
+        .teleport-btn { font-size: 16px; padding: 8px; margin: 0 12px 12px 12px; border-color: var(--cyan); color: var(--cyan); background: transparent; }
+        .teleport-btn.urgent { border-color: var(--amber); color: var(--amber); background: rgba(255, 176, 0, 0.1); animation: pulse 1s infinite; }
 
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
     </style>
@@ -113,7 +117,7 @@
 
 <div class="layout">
     <div class="header">
-        <h1>[ <span style="color: #fff;">USSC VANGUARD</span> ] TACTICAL BRIDGE <span class="alert-badge">MULTIPLE BOGEYS</span></h1>
+        <h1>[ <span style="color: #fff;">USSC VANGUARD</span> ] TACTICAL BRIDGE <span class="alert-badge" id="main-alert">HOSTILE CONTACTS</span></h1>
         <div style="text-align: right; font-size: 18px;">
             <div id="sys-clock">00:00:00 UTC</div>
             <div style="font-size: 12px; color: var(--amber);">SYS: NOMINAL | LOC: ORBITAL</div>
@@ -122,13 +126,17 @@
 
     <div class="mfd">
         <div class="mfd-title">VESSEL TELEMETRY</div>
-        <div class="data-list">
+        <div class="data-list" style="padding-bottom: 5px;">
             <div class="data-row"><span>VELOCITY</span><span class="val" id="vel">24,532 km/h</span></div>
             <div class="data-row"><span>ALTITUDE</span><span class="val" id="alt">408.2 km</span></div>
-            <div class="data-row"><span>HULL INTEGRITY</span><span class="val">100%</span></div>
         </div>
 
-        <div class="mfd-title" style="margin-top: 20px;">POWER ROUTING</div>
+        <div class="mfd-title" style="margin-top: 5px;">AWAY TEAM STATUS</div>
+        <div class="data-list" id="crew-list" style="padding-top: 5px; padding-bottom: 10px; gap: 4px;">
+            </div>
+        <button class="exec-btn teleport-btn" id="teleport-btn" disabled>TEAM ABOARD</button>
+
+        <div class="mfd-title" style="margin-top: auto;">POWER ROUTING</div>
         <div class="power-routing">
             <div>
                 <div class="sys-label"><span style="color: var(--cyan);">DEFLECTORS</span><span id="pwr-val-shd">100%</span></div>
@@ -182,11 +190,9 @@
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain); gain.connect(audioCtx.destination);
-
         const now = audioCtx.currentTime;
 
         if (type === 'lock') {
-            // High-pitched rapid double blip
             osc.type = 'square';
             osc.frequency.setValueAtTime(880, now);
             osc.frequency.setValueAtTime(1760, now + 0.05);
@@ -194,7 +200,6 @@
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
             osc.start(now); osc.stop(now + 0.15);
         } else if (type === 'fire') {
-            // Descending laser sweep
             osc.type = 'sawtooth';
             osc.frequency.setValueAtTime(800, now);
             osc.frequency.exponentialRampToValueAtTime(100, now + 0.2);
@@ -202,17 +207,137 @@
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
             osc.start(now); osc.stop(now + 0.2);
         } else if (type === 'explosion') {
-            // Low-frequency rumble
             osc.type = 'sawtooth';
             osc.frequency.setValueAtTime(100, now);
             osc.frequency.exponentialRampToValueAtTime(10, now + 0.5);
             gain.gain.setValueAtTime(0.3, now);
             gain.gain.exponentialRampToValueAtTime(0.01, now + 1.0);
             osc.start(now); osc.stop(now + 1.0);
+        } else if (type === 'alert') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.setValueAtTime(400, now + 0.4);
+            osc.frequency.setValueAtTime(600, now + 0.8);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0.01, now + 1.2);
+            osc.start(now); osc.stop(now + 1.2);
+        } else if (type === 'teleport') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.exponentialRampToValueAtTime(1200, now + 1.5);
+            gain.gain.setValueAtTime(0.01, now);
+            gain.gain.linearRampToValueAtTime(0.1, now + 0.75);
+            gain.gain.linearRampToValueAtTime(0.01, now + 1.5);
+            osc.start(now); osc.stop(now + 1.5);
         }
     }
 
-    // --- ENGINE CORE ---
+    // --- AWAY TEAM STATE MACHINE ---
+    const crew = [
+        { name: "CMDR VANCE", hp: 100, alive: true },
+        { name: "LT KOWALSKI", hp: 100, alive: true },
+        { name: "ENS CHEN", hp: 100, alive: true },
+        { name: "DR ARIS", hp: 100, alive: true },
+        { name: "SGT MAJOR", hp: 100, alive: true },
+        { name: "SPEC TARN", hp: 100, alive: true },
+        { name: "ENG RIZZO", hp: 100, alive: true }
+    ];
+    let awayState = 'IDLE'; // IDLE, DEPLOYED, BEAMING
+    let nextMissionTime = Date.now() + Math.random() * 15000 + 10000; // Trigger between 10s and 25s
+
+    function renderCrew() {
+        let html = '';
+        crew.forEach(c => {
+            const color = c.hp > 50 ? 'var(--cyan)' : (c.hp > 20 ? 'var(--amber)' : 'var(--crimson)');
+            const textClass = !c.alive ? 'val alert' : '';
+            const statusText = !c.alive ? 'KIA' : Math.floor(c.hp) + '%';
+            html += `
+                <div class="data-row" style="border:none; padding:0; margin:0;">
+                    <span class="${textClass}">${c.name}</span>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:10px; color:${color}; width: 25px; text-align:right;">${statusText}</span>
+                        <div class="bar-bg" style="width: 60px; height: 6px; cursor: default; margin:0;">
+                            <div class="bar-fill" style="width: ${c.hp}%; background: ${color};"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        document.getElementById('crew-list').innerHTML = html;
+    }
+    renderCrew();
+
+    // Crew Event Loop (1 Tick per Second)
+    setInterval(() => {
+        const now = Date.now();
+        const tpBtn = document.getElementById('teleport-btn');
+        const alertBadge = document.getElementById('main-alert');
+
+        if (awayState === 'IDLE') {
+            // Heal crew over time
+            let healed = false;
+            crew.forEach(c => {
+                if(c.alive && c.hp < 100) { c.hp = Math.min(100, c.hp + 4); healed = true; }
+            });
+            if(healed) renderCrew();
+
+            // Trigger Mission
+            if (now > nextMissionTime && crew.some(c => c.alive)) {
+                awayState = 'DEPLOYED';
+                playSound('alert');
+                tpBtn.disabled = false;
+                tpBtn.innerText = "EMERGENCY BEAM OUT";
+                tpBtn.className = "exec-btn teleport-btn urgent";
+                alertBadge.innerText = "AWAY TEAM ENGAGED";
+                alertBadge.className = "alert-badge away";
+            }
+        } else if (awayState === 'DEPLOYED') {
+            // Calculate Damage
+            let dmgTaken = false;
+            crew.forEach(c => {
+                if(c.alive && Math.random() > 0.4) { // 60% chance to take damage per tick
+                    c.hp -= Math.random() * 12 + 3;
+                    dmgTaken = true;
+                    if(c.hp <= 0) { c.hp = 0; c.alive = false; playSound('alert'); } // Death sound
+                }
+            });
+            if(dmgTaken) renderCrew();
+
+            // Auto-fail if team is wiped out
+            if (!crew.some(c => c.alive)) {
+                awayState = 'IDLE';
+                tpBtn.disabled = true;
+                tpBtn.innerText = "ALL HANDS LOST";
+                tpBtn.className = "exec-btn teleport-btn";
+                alertBadge.innerText = "HOSTILE CONTACTS";
+                alertBadge.className = "alert-badge";
+            }
+        }
+    }, 1000);
+
+    // Teleport Action
+    document.getElementById('teleport-btn').addEventListener('click', () => {
+        if (awayState === 'DEPLOYED') {
+            initAudio();
+            awayState = 'BEAMING';
+            playSound('teleport');
+            const tpBtn = document.getElementById('teleport-btn');
+            tpBtn.disabled = true;
+            tpBtn.innerText = "ENERGIZING...";
+            tpBtn.className = "exec-btn teleport-btn";
+            
+            setTimeout(() => {
+                awayState = 'IDLE';
+                nextMissionTime = Date.now() + Math.random() * 20000 + 15000;
+                tpBtn.innerText = "TEAM ABOARD";
+                document.getElementById('main-alert').innerText = "HOSTILE CONTACTS";
+                document.getElementById('main-alert').className = "alert-badge";
+            }, 1500);
+        }
+    });
+
+
+    // --- ENGINE CORE (3D CANVAS) ---
     const canvas = document.getElementById('nav-canvas');
     const ctx = canvas.getContext('2d');
     
@@ -229,9 +354,10 @@
     
     let isWarping = false;
     let warpSpeed = 0;
-    let lockedTargets = []; // Converted to Array for multi-lock
+    let lockedTargets = [];
     let weaponPower = 80;
-    let mouseX = -100, mouseY = -100; // Start mouse offscreen
+    let mouseX = -100, mouseY = -100;
+    const LOCK_RADIUS = 45; // Widened targeting acquisition radius
 
     // Wireframe Sphere
     for (let lat = -90; lat <= 90; lat += 15) {
@@ -265,7 +391,6 @@
         return { px: cx + x1 * scale, py: cy + y2 * scale, scale: scale, depth: z2 };
     }
 
-    // --- MAIN RENDER LOOP ---
     function animate() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const cx = canvas.width / 2; const cy = canvas.height / 2;
@@ -311,13 +436,10 @@
                 ctx.beginPath(); ctx.moveTo(p.px, p.py - 6); ctx.lineTo(p.px + 6, p.py + 6); ctx.lineTo(p.px - 6, p.py + 6); ctx.closePath(); ctx.stroke();
                 ctx.fillStyle = '#ff2a2a'; ctx.font = "10px monospace"; ctx.fillText(tgt.id, p.px + 10, p.py);
 
-                // Multi-Lock Reticles
                 if (lockedTargets.includes(tgt)) {
                     ctx.strokeStyle = 'var(--amber)';
                     const s = Math.sin(Date.now() / 200) * 4 + 18;
                     ctx.strokeRect(p.px - s/2, p.py - s/2, s, s);
-                    
-                    // Draw vector index number
                     ctx.fillStyle = 'var(--amber)';
                     ctx.fillText(`L-${lockedTargets.indexOf(tgt)+1}`, p.px - s/2, p.py - s/2 - 4);
                 }
@@ -333,7 +455,6 @@
                 beam.target.alive = false;
                 beams.splice(index, 1);
                 
-                // Remove dead target from lock array
                 lockedTargets = lockedTargets.filter(t => t.alive);
                 updateTargetUI();
                 return;
@@ -357,22 +478,28 @@
             ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.size * pt.life, 0, Math.PI*2); ctx.fill();
         });
 
-        // 5. Custom Crosshair
+        // 5. Custom Crosshair & Acquisition Ring
         if (mouseX > 0 && mouseY > 0 && !isWarping) {
             ctx.strokeStyle = 'rgba(0, 240, 255, 0.8)';
             ctx.lineWidth = 1;
             ctx.beginPath();
-            // Outer Ring
-            ctx.arc(mouseX, mouseY, 20, 0, Math.PI * 2);
             // Center Dot
             ctx.arc(mouseX, mouseY, 2, 0, Math.PI * 2);
             ctx.stroke();
+            
+            // Outer Acquisition Ring (Matches Hitbox Radius)
+            ctx.beginPath();
+            ctx.setLineDash([4, 6]);
+            ctx.arc(mouseX, mouseY, LOCK_RADIUS, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
             // Cardinal Lines
             ctx.beginPath();
-            ctx.moveTo(mouseX - 30, mouseY); ctx.lineTo(mouseX - 10, mouseY);
-            ctx.moveTo(mouseX + 10, mouseY); ctx.lineTo(mouseX + 30, mouseY);
-            ctx.moveTo(mouseX, mouseY - 30); ctx.lineTo(mouseX, mouseY - 10);
-            ctx.moveTo(mouseX, mouseY + 10); ctx.lineTo(mouseX, mouseY + 30);
+            ctx.moveTo(mouseX - 15, mouseY); ctx.lineTo(mouseX - 5, mouseY);
+            ctx.moveTo(mouseX + 5, mouseY); ctx.lineTo(mouseX + 15, mouseY);
+            ctx.moveTo(mouseX, mouseY - 15); ctx.lineTo(mouseX, mouseY - 5);
+            ctx.moveTo(mouseX, mouseY + 5); ctx.lineTo(mouseX, mouseY + 15);
             ctx.stroke();
         }
 
@@ -384,7 +511,7 @@
         requestAnimationFrame(animate);
     }
 
-    // --- INTERACTION LOGIC ---
+    // --- TACTICAL INTERACTION LOGIC ---
     canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
         mouseX = e.clientX - rect.left; mouseY = e.clientY - rect.top;
@@ -393,8 +520,8 @@
     canvas.addEventListener('mouseleave', () => { mouseX = -100; mouseY = -100; });
 
     canvas.addEventListener('mousedown', (e) => {
-        initAudio(); // Required to unlock Web Audio context
-        let hit = null; let minDist = 25;
+        initAudio(); 
+        let hit = null; let minDist = LOCK_RADIUS; // Uses widened radius
 
         targets.forEach(tgt => {
             if(!tgt.alive || tgt.depth > 0) return;
@@ -405,17 +532,14 @@
         if (hit) {
             const index = lockedTargets.indexOf(hit);
             if (index > -1) {
-                // Target already locked, click again to unlock
                 lockedTargets.splice(index, 1); 
             } else {
-                // Lock new target (Max 4)
                 if (lockedTargets.length < 4) {
                     lockedTargets.push(hit);
                     playSound('lock');
                 }
             }
         } else {
-            // Clicked empty space, clear all locks
             lockedTargets = [];
         }
         updateTargetUI();
@@ -455,14 +579,9 @@
         
         if (lockedTargets.length > 0 && weaponPower >= cost) {
             playSound('fire');
-            
             lockedTargets.forEach((tgt, index) => {
-                // Stagger beams slightly for visual effect
-                setTimeout(() => {
-                    beams.push({ target: tgt, progress: 0 });
-                }, index * 150);
+                setTimeout(() => { beams.push({ target: tgt, progress: 0 }); }, index * 150);
             });
-            
             weaponPower -= cost;
             updatePowerVisuals('wep', weaponPower);
         }
@@ -496,7 +615,7 @@
         document.getElementById(`bar-${sys}`).style.width = percent + '%';
         document.getElementById(`thumb-${sys}`).style.left = `calc(${percent}% - 3px)`;
         document.getElementById(`pwr-val-${sys}`).innerText = Math.floor(percent) + '%';
-        updateTargetUI(); // Check if power dropped below required firing threshold
+        updateTargetUI();
     }
     function stopDrag() { activeSlider = null; document.removeEventListener('mousemove', drag); document.removeEventListener('mouseup', stopDrag); }
 

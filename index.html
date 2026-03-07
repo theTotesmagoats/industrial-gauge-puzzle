@@ -47,7 +47,7 @@
             overflow: hidden; box-shadow: inset 0 0 50px rgba(0,0,0,0.8); cursor: crosshair;
         }
 
-        canvas#tactical-display { width: 100%; height: 100%; display: block; }
+        canvas#tactical-display { width: 100%; height: 100%; display: block; cursor: none; }
 
         .view-overlay { position: absolute; top: 20px; left: 20px; font-size: 1.2em; text-shadow: var(--text-shadow); pointer-events: none; }
 
@@ -63,6 +63,718 @@
         input[type="range"] { width: 100%; accent-color: var(--primary-color); cursor: pointer; }
 
         .crew-list { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; }
+        .crew-member {
+            background-color: rgba(57,255,20,0.1); padding: 8px; border-radius: 4px;
+            display: flex; justify-content: space-between; align-items: center; border-left: 3px solid var(--primary-color);
+        }
+        .crew-status { font-size: 0.8em; color: #aaa; }
+        
+        .health-bar { width: 100%; height: 6px; background-color: #2a3b55; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+        .health-fill { height: 100%; transition: width 0.5s, background-color 0.5s; }
+
+        #comms-log { font-size: 0.85em; line-height: 1.4; overflow-y: auto; max-height: 300px; padding-right: 5px; }
+        .log-entry { margin-bottom: 6px; border-bottom: 1px solid rgba(57,255,20,0.2); padding-bottom: 4px; }
+        .log-time { color: var(--info-color); font-size: 0.8em; margin-right: 5px; }
+
+        .action-buttons { display: flex; gap: 10px; justify-content: center; padding-top: 20px; border-top: 1px solid #3a4b65; margin-top: 10px; }
+        
+        button {
+            background-color: rgba(57,255,20,0.1); color: var(--primary-color); border: 1px solid var(--primary-color);
+            padding: 8px 16px; font-family: inherit; cursor: pointer; transition: all 0.2s;
+        }
+        button:hover:not(:disabled) { background-color: rgba(57,255,20,0.3); box-shadow: 0 0 10px var(--primary-color); }
+        button:disabled { border-color: #555; color: #555; cursor: not-allowed; }
+
+        button.alert-btn { border-color: var(--alert-color); color: var(--alert-color); }
+        button.alert-btn:hover { background-color: rgba(255,51,51,0.3); box-shadow: 0 0 10px var(--alert-color); }
+
+        .warp-indicator { display: flex; align-items: center; gap: 10px; margin-top: 20px; padding: 10px; background-color: rgba(57,255,20,0.05); border-radius: 4px; }
+        .speed-display { font-size: 1.5em; font-weight: bold; }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a2330; }
+        ::-webkit-scrollbar-thumb { background: var(--primary-color); border-radius: 4px; }
+
+        .status-indicator { position: absolute; top: 15px; right: 15px; display: flex; gap: 15px; font-size: 0.9em; }
+        .status-item { display: flex; align-items: center; gap: 5px; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; background-color: var(--primary-color); box-shadow: 0 0 5px var(--primary-color); }
+    </style>
+</head>
+<body>
+    <div id="bridge">
+        <div class="panel top-left">
+            <div class="header-bar">USS ATLAS - COMMAND</div>
+            
+            <div class="system-grid">
+                <div class="system-item">
+                    <div class="system-label">FUEL (Dilithium)</div>
+                    <div class="slider-container">
+                        <input type="range" min="0" max="100" value="85" id="fuel-level" disabled>
+                        <span id="fuel-value">85%</span>
+                    </div>
+                    <div class="health-bar"><div class="health-fill" id="fuel-bar" style="width: 85%; background-color: var(--primary-color);"></div></div>
+                </div>
+                
+                <div class="system-item">
+                    <div class="system-label">CREW MORALE</div>
+                    <div class="slider-container">
+                        <input type="range" min="0" max="100" value="78" id="morale-level" disabled>
+                        <span id="morale-value">78%</span>
+                    </div>
+                    <div class="health-bar"><div class="health-fill" id="morale-bar" style="width: 78%; background-color: var(--warn-color);"></div></div>
+                </div>
+                
+                <div class="system-item">
+                    <div class="system-label">LIFE SUPPORT</div>
+                    <div class="slider-container">
+                        <input type="range" min="0" max="100" value="92" id="life-support-level" disabled>
+                        <span id="life-support-value">92%</span>
+                    </div>
+                    <div class="health-bar"><div class="health-fill" id="life-bar" style="width: 92%; background-color: var(--primary-color);"></div></div>
+                </div>
+                
+                <div class="system-item">
+                    <div class="system-label">SHIELDS</div>
+                    <div class="slider-container">
+                        <input type="range" min="0" max="100" value="65" id="shields-level" disabled>
+                        <span id="shields-value">65%</span>
+                    </div>
+                    <div class="health-bar"><div class="health-fill" id="shield-bar" style="width: 65%; background-color: var(--info-color);"></div></div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button onclick="game.repairSystems()">REPAIR SYSTEMS</button>
+            </div>
+
+            <div style="margin-top: 15px; font-size: 0.9em;">
+                <strong>SHIP INTEGRITY:</strong><br>
+                Hull: <span id="hull-integrity">88%</span><br>
+                Warp Drive: <span id="warp-drive-status">Operational</span>
+            </div>
+        </div>
+
+        <div class="main-view-container">
+            <div class="panel" style="padding-bottom: 0;">
+                <div class="header-bar" style="margin-bottom: 10px;">TACTICAL 3D PROJECTION - USS ATLAS</div>
+            </div>
+            
+            <div id="main-view">
+                <canvas id="tactical-display"></canvas>
+                
+                <div class="view-overlay">
+                    <strong>COMMANDER, SENSORS DETECT:</strong><br>
+                    <span id="sensor-readings">Scanning local orbit...</span>
+                </div>
+
+                <div class="status-indicator">
+                    <div class="status-item"><div class="status-dot" style="background-color: var(--primary-color);"></div> NAV</div>
+                    <div class="status-item"><div class="status-dot" id="shields-status" style="background-color: var(--info-color);"></div> SLD</div>
+                    <div class="status-item"><div class="status-dot" id="weapons-status" style="background-color: var(--alert-color);"></div> WPN</div>
+                    <div class="status-item"><div class="status-dot" id="engine-status" style="background-color: var(--primary-color);"></div> ENG</div>
+                </div>
+            </div>
+
+            <div class="panel bridge-controls">
+                <div style="width: 45%;">
+                    <div class="header-bar" style="margin-bottom: 10px;">ORBITAL IMPULSE</div>
+                    
+                    <div class="warp-indicator">
+                        <label for="engine-power">IMPULSE POWER:</label>
+                        <input type="range" min="0" max="8" value="3" id="engine-power">
+                        <span id="engine-value" class="speed-display">3</span>
+                    </div>
+
+                    <div style="margin-top: 15px;">
+                        <button onclick="game.hyperwarpJump()">EMERGENCY JUMP</button>
+                    </div>
+                </div>
+
+                <div style="width: 45%;">
+                    <div class="header-bar" style="margin-bottom: 10px;">WEAPONS & DEFENSES</div>
+                    
+                    <div class="system-grid">
+                        <div class="system-item">
+                            <div class="system-label">PHASER ARRAYS</div>
+                            <button id="fire-phaser" disabled>FIRE PHASERS</button>
+                        </div>
+                        
+                        <div class="system-item">
+                            <div class="system-label">PHOTON TORPEDOES (<span id="torpedo-count">12</span>)</div>
+                            <button id="fire-torpedo" disabled>FIRE TORPEDO</button>
+                        </div>
+
+                        <div class="system-item" style="grid-column: span 2;">
+                            <div class="system-label">TARGETING COMPUTER</div>
+                            <span id="target-lock" style="color: var(--warn-color);">NO TARGET LOCKED</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel top-right">
+            <div class="header-bar">AWAY PARTY & RESOURCES</div>
+            
+            <div style="margin-bottom: 20px;">
+                <strong>LOCAL PLANET STATUS:</strong><br>
+                <span id="away-team-status" style="color: var(--primary-color); font-weight: bold;">No active away teams.</span>
+                <button id="btn-away-team" onclick="game.sendAwayTeam()" style="width: 100%; margin-top: 10px; background-color: rgba(57,255,20,0.2);">BEAM DOWN TO SURFACE</button>
+            </div>
+
+            <div class="crew-list" id="away-team-list">
+                </div>
+
+            <div style="margin-top: 30px; border-top: 1px solid #3a4b65; padding-top: 20px;">
+                <strong>RESOURCE CARGO:</strong>
+                
+                <div class="system-item" style="margin-top: 15px;">
+                    <div class="system-label">FOOD RATIONS</div>
+                    <span id="food-rations">1,240 units</span>
+                </div>
+
+                <div class="system-item">
+                    <div class="system-label">SCIENTIFIC DATA</div>
+                    <span id="scientific-data">420 points</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel bottom-right" style="grid-column: 3; grid-row: 2;">
+            <div class="header-bar">COMMUNICATIONS LOG</div>
+            
+            <div id="comms-log">
+                <div class="log-entry"><span class="log-time">0800 hrs</span> USS Atlas assuming standard orbit.</div>
+                <div class="log-entry"><span class="log-time">0815 hrs</span> Life support systems operating at 92% efficiency.</div>
+            </div>
+
+            <button onclick="game.clearComms()" style="width: 100%; margin-top: 15px; font-size: 0.9em;">CLEAR LOG</button>
+        </div>
+    </div>
+
+    <script>
+        class USSAtlasGame {
+            constructor() {
+                // Core Systems
+                this.systems = { fuel: 85, morale: 78, lifeSupport: 92, shields: 65 };
+                this.resources = { food: 1240, scientificData: 420, dilithium: 1000, torpedoes: 12 };
+
+                this.crew = [
+                    { name: "CMDR VANCE", role: "First Officer", health: 100 },
+                    { name: "DR. CRUSHER", role: "Chief Medical", health: 100 },
+                    { name: "LT. WORF", role: "Security", health: 100 },
+                    { name: "ENS. RO", role: "Nav", health: 100 }
+                ];
+                this.awayTeam = [];
+
+                // Engine State
+                this.timeElapsed = 0;
+                this.impulseSpeed = 3;
+                this.audioCtx = null;
+                
+                // Canvas & Tactics State
+                this.canvas = document.getElementById('tactical-display');
+                this.ctx = this.canvas.getContext('2d');
+                this.mouseX = -100;
+                this.mouseY = -100;
+                this.lockedTarget = null;
+                
+                this.entities = [];
+                this.projectiles = [];
+                this.particles = [];
+                
+                this.shipX = 0;
+                this.shipY = 0;
+
+                // 3D Globe Properties
+                this.globeNodes = [];
+                this.globeRadius = 180;
+                this.angleX = 0.3;
+                this.angleY = 0;
+
+                this.init();
+            }
+
+            init() {
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+                
+                // Generate 3D Globe Wireframe
+                for (let lat = -90; lat <= 90; lat += 15) {
+                    for (let lon = 0; lon < 360; lon += 15) {
+                        const latRad = lat * (Math.PI / 180);
+                        const lonRad = lon * (Math.PI / 180);
+                        this.globeNodes.push({
+                            x: this.globeRadius * Math.cos(latRad) * Math.cos(lonRad),
+                            y: this.globeRadius * Math.sin(latRad),
+                            z: this.globeRadius * Math.cos(latRad) * Math.sin(lonRad)
+                        });
+                    }
+                }
+
+                // Mouse Tracking
+                this.canvas.addEventListener('mousemove', (e) => {
+                    const rect = this.canvas.getBoundingClientRect();
+                    this.mouseX = e.clientX - rect.left;
+                    this.mouseY = e.clientY - rect.top;
+                });
+
+                this.canvas.addEventListener('mouseleave', () => {
+                    this.mouseX = -100;
+                    this.mouseY = -100;
+                });
+
+                this.canvas.addEventListener('mousedown', (e) => {
+                    this.attemptLock();
+                });
+
+                // Controls
+                document.getElementById('engine-power').addEventListener('input', (e) => {
+                    this.impulseSpeed = parseInt(e.target.value);
+                    document.getElementById('engine-value').innerText = this.impulseSpeed;
+                });
+
+                document.getElementById('fire-phaser').addEventListener('click', () => this.fireWeapon('phaser'));
+                document.getElementById('fire-torpedo').addEventListener('click', () => this.fireWeapon('torpedo'));
+
+                setInterval(() => this.systemTick(), 1000); // 1Hz Logic
+                requestAnimationFrame(() => this.renderLoop()); // 60Hz Render
+                
+                this.spawnEnvironment();
+            }
+
+            resizeCanvas() {
+                const rect = document.getElementById('main-view').getBoundingClientRect();
+                this.canvas.width = rect.width;
+                this.canvas.height = rect.height;
+                this.shipX = this.canvas.width / 2;
+                this.shipY = this.canvas.height; // Firing weapons from bottom center
+            }
+
+            // --- AUDIO SYNTHESIS ---
+            initAudio() {
+                if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+            }
+
+            playSound(type) {
+                this.initAudio();
+                const osc = this.audioCtx.createOscillator();
+                const gain = this.audioCtx.createGain();
+                osc.connect(gain); gain.connect(this.audioCtx.destination);
+                const now = this.audioCtx.currentTime;
+
+                if (type === 'lock') {
+                    osc.type = 'square'; osc.frequency.setValueAtTime(880, now); osc.frequency.setValueAtTime(1760, now + 0.05);
+                    gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now); osc.stop(now + 0.15);
+                } else if (type === 'phaser') {
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(200, now + 0.3);
+                    gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now); osc.stop(now + 0.3);
+                } else if (type === 'torpedo') {
+                    osc.type = 'square'; osc.frequency.setValueAtTime(300, now); osc.frequency.linearRampToValueAtTime(100, now + 0.4);
+                    gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    osc.start(now); osc.stop(now + 0.4);
+                } else if (type === 'explosion') {
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, now); osc.frequency.exponentialRampToValueAtTime(10, now + 0.6);
+                    gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 1.0);
+                    osc.start(now); osc.stop(now + 1.0);
+                } else if (type === 'warp') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(1200, now + 1.5);
+                    gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 1.5);
+                    osc.start(now); osc.stop(now + 1.5);
+                }
+            }
+
+            // --- 1HZ SYSTEM TICK ---
+            systemTick() {
+                this.timeElapsed++;
+
+                // Spawn orbital enemies
+                if (Math.random() < 0.15 && this.entities.length < 5) {
+                    this.entities.push({
+                        type: 'enemy', id: 'BOP-' + Math.floor(Math.random()*8999+1000),
+                        orbitAlt: this.globeRadius + 40 + Math.random() * 60,
+                        angle: Math.random() * Math.PI * 2,
+                        speed: (Math.random() * 0.02 + 0.01) * (Math.random() > 0.5 ? 1 : -1),
+                        inclination: (Math.random() - 0.5) * 1.5,
+                        hull: 100,
+                        alive: true
+                    });
+                    this.log("Sensors: Hostile vessel detected entering orbit.");
+                }
+
+                // Away Team Logic
+                if (this.awayTeam.length > 0) {
+                    this.awayTeam.forEach(member => {
+                        member.health -= Math.floor(Math.random() * 6 + 2); // Harsh planet
+                        if (member.health <= 0) member.health = 0;
+                    });
+                    if (!this.awayTeam.some(m => m.health > 0)) {
+                        this.log("TRAGEDY: Away team lost. No vital signs detected.");
+                        this.awayTeam = [];
+                        this.systems.morale -= 20;
+                    }
+                }
+
+                this.updateUI();
+            }
+
+            spawnEnvironment() {
+                for(let i=0; i<3; i++) {
+                    this.entities.push({
+                        type: 'enemy', id: 'BOP-' + Math.floor(Math.random()*8999+1000),
+                        orbitAlt: this.globeRadius + 40 + Math.random() * 60,
+                        angle: Math.random() * Math.PI * 2,
+                        speed: (Math.random() * 0.02 + 0.01) * (Math.random() > 0.5 ? 1 : -1),
+                        inclination: (Math.random() - 0.5) * 1.5,
+                        hull: 100, alive: true
+                    });
+                }
+            }
+
+            // --- COMBAT & TARGETING ---
+            project3D(x, y, z, cx, cy, cosX, sinX, cosY, sinY) {
+                let x1 = x * cosY - z * sinY;
+                let z1 = z * cosY + x * sinY;
+                let y2 = y * cosX - z1 * sinX;
+                let z2 = z1 * cosX + y * sinX;
+                const scale = 400 / (400 + z2);
+                return { px: cx + x1 * scale, py: cy + y2 * scale, scale: scale, depth: z2 };
+            }
+
+            attemptLock() {
+                this.initAudio();
+                let hit = null;
+                let minDist = 30; // Acquisition radius
+
+                this.entities.forEach(ent => {
+                    if (ent.type === 'enemy' && ent.alive && !ent.isOccluded) {
+                        const dist = Math.hypot(ent.screenX - this.mouseX, ent.screenY - this.mouseY);
+                        if (dist < minDist) { minDist = dist; hit = ent; }
+                    }
+                });
+
+                if (hit) {
+                    if (this.lockedTarget !== hit) {
+                        this.lockedTarget = hit;
+                        this.playSound('lock');
+                        document.getElementById('target-lock').innerText = `LOCKED: ${hit.id}`;
+                        document.getElementById('target-lock').style.color = 'var(--alert-color)';
+                        document.getElementById('fire-phaser').disabled = false;
+                        document.getElementById('fire-torpedo').disabled = this.resources.torpedoes <= 0;
+                    } else {
+                        this.clearLock();
+                    }
+                } else {
+                    this.clearLock();
+                }
+            }
+
+            clearLock() {
+                this.lockedTarget = null;
+                document.getElementById('target-lock').innerText = "NO TARGET LOCKED";
+                document.getElementById('target-lock').style.color = 'var(--warn-color)';
+                document.getElementById('fire-phaser').disabled = true;
+                document.getElementById('fire-torpedo').disabled = true;
+            }
+
+            fireWeapon(type) {
+                if (!this.lockedTarget || !this.lockedTarget.alive) return;
+
+                if (type === 'phaser') {
+                    this.playSound('phaser');
+                    this.projectiles.push({ type: 'beam', target: this.lockedTarget, progress: 0 });
+                } else if (type === 'torpedo' && this.resources.torpedoes > 0) {
+                    this.playSound('torpedo');
+                    this.resources.torpedoes--;
+                    document.getElementById('torpedo-count').innerText = this.resources.torpedoes;
+                    
+                    const angle = Math.atan2(this.lockedTarget.screenY - this.shipY, this.lockedTarget.screenX - (this.canvas.width/2));
+                    this.projectiles.push({
+                        type: 'torpedo', target: this.lockedTarget,
+                        x: this.canvas.width / 2, y: this.shipY, angle: angle, speed: 8
+                    });
+                }
+            }
+
+            triggerExplosion(x, y) {
+                this.playSound('explosion');
+                for(let i=0; i<30; i++) {
+                    this.particles.push({
+                        x: x, y: y,
+                        vx: (Math.random() - 0.5) * 12, vy: (Math.random() - 0.5) * 12,
+                        life: 1.0, color: Math.random() > 0.5 ? '#ffaa00' : '#ff3333'
+                    });
+                }
+            }
+
+            // --- 60HZ RENDER LOOP ---
+            renderLoop() {
+                this.ctx.fillStyle = '#0a1420';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                const cx = this.canvas.width / 2;
+                const cy = this.canvas.height / 2;
+
+                // Draw Stars
+                this.ctx.fillStyle = 'white';
+                for (let i = 0; i < 40; i++) {
+                    const x = (Math.sin(i * 132.1) * this.canvas.width + this.canvas.width) % this.canvas.width;
+                    const y = (Math.cos(i * 43.7) * this.canvas.height + this.canvas.height) % this.canvas.height;
+                    this.ctx.globalAlpha = Math.random() * 0.5 + 0.1;
+                    this.ctx.fillRect(x, y, 2, 2);
+                }
+                this.ctx.globalAlpha = 1;
+
+                // Rotation Math (Driven by Impulse Slider)
+                this.angleY += (this.impulseSpeed * 0.002);
+                const cosX = Math.cos(this.angleX), sinX = Math.sin(this.angleX);
+                const cosY = Math.cos(this.angleY), sinY = Math.sin(this.angleY);
+
+                // Draw 3D Globe
+                this.ctx.fillStyle = 'var(--primary-color)'; // Starfleet Green
+                this.globeNodes.forEach(n => {
+                    const p = this.project3D(n.x, n.y, n.z, cx, cy, cosX, sinX, cosY, sinY);
+                    this.ctx.globalAlpha = p.depth > 0 ? 0.15 : 0.8;
+                    this.ctx.fillRect(p.px, p.py, 2, 2);
+                });
+
+                // Update & Draw Orbital Targets
+                this.entities.forEach((tgt, idx) => {
+                    if(!tgt.alive) return;
+                    
+                    tgt.angle += tgt.speed;
+                    
+                    const tx = tgt.orbitAlt * Math.cos(tgt.angle);
+                    const ty = tgt.orbitAlt * Math.sin(tgt.angle) * tgt.inclination;
+                    const tz = tgt.orbitAlt * Math.sin(tgt.angle);
+
+                    const p = this.project3D(tx, ty, tz, cx, cy, cosX, sinX, cosY, sinY);
+                    tgt.screenX = p.px; tgt.screenY = p.py; tgt.depth = p.depth;
+
+                    // Occlusion Check (Behind the planet)
+                    const distToCenter = Math.hypot(p.px - cx, p.py - cy);
+                    tgt.isOccluded = (p.depth > 0 && distToCenter < this.globeRadius * 0.9);
+
+                    if (!tgt.isOccluded) {
+                        this.ctx.globalAlpha = 1.0;
+                        this.ctx.strokeStyle = '#ff3333'; this.ctx.lineWidth = 1.5;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(p.px, p.py - 6); this.ctx.lineTo(p.px + 6, p.py + 6); this.ctx.lineTo(p.px - 6, p.py + 6); this.ctx.closePath();
+                        this.ctx.stroke();
+
+                        this.ctx.fillStyle = '#ff3333'; this.ctx.font = "10px monospace";
+                        this.ctx.fillText(tgt.id, p.px + 10, p.py);
+
+                        // Health Bar
+                        const hpPct = Math.max(0, tgt.hull / 100);
+                        this.ctx.fillStyle = '#f00'; this.ctx.fillRect(p.px - 10, p.py + 10, 20, 3);
+                        this.ctx.fillStyle = '#0f0'; this.ctx.fillRect(p.px - 10, p.py + 10, 20 * hpPct, 3);
+
+                        if (this.lockedTarget === tgt) {
+                            this.ctx.strokeStyle = 'var(--alert-color)';
+                            const s = Math.sin(Date.now() / 200) * 4 + 20;
+                            this.ctx.strokeRect(p.px - s/2, p.py - s/2, s, s);
+                        }
+                    }
+                });
+
+                // Clear dead targets from entities
+                for (let i = this.entities.length - 1; i >= 0; i--) {
+                    if (!this.entities[i].alive) {
+                        if(this.lockedTarget === this.entities[i]) this.clearLock();
+                        this.entities.splice(i, 1);
+                    }
+                }
+
+                // Draw Projectiles
+                this.projectiles.forEach((proj, pIdx) => {
+                    if (proj.type === 'beam') {
+                        proj.progress += 0.15;
+                        if (proj.progress >= 1) {
+                            proj.target.hull -= 25;
+                            if (proj.target.hull <= 0) proj.target.alive = false;
+                            this.triggerExplosion(proj.target.screenX, proj.target.screenY);
+                            this.projectiles.splice(pIdx, 1); return;
+                        }
+                        const bx = cx + (proj.target.screenX - cx) * proj.progress;
+                        const by = this.canvas.height + (proj.target.screenY - this.canvas.height) * proj.progress;
+                        
+                        this.ctx.strokeStyle = '#fff'; this.ctx.lineWidth = 3;
+                        this.ctx.shadowBlur = 10; this.ctx.shadowColor = 'var(--warn-color)';
+                        this.ctx.beginPath(); this.ctx.moveTo(cx, this.canvas.height); this.ctx.lineTo(bx, by); this.ctx.stroke();
+                        this.ctx.shadowBlur = 0;
+                    } else if (proj.type === 'torpedo') {
+                        // 2D Homing Math toward projected coordinate
+                        if (proj.target && proj.target.alive && !proj.target.isOccluded) {
+                            const tgtAngle = Math.atan2(proj.target.screenY - proj.y, proj.target.screenX - proj.x);
+                            let aDiff = tgtAngle - proj.angle;
+                            while(aDiff < -Math.PI) aDiff += Math.PI*2; while(aDiff > Math.PI) aDiff -= Math.PI*2;
+                            proj.angle += aDiff * 0.08;
+                        }
+                        proj.x += Math.cos(proj.angle) * proj.speed;
+                        proj.y += Math.sin(proj.angle) * proj.speed;
+
+                        this.ctx.fillStyle = '#fff'; this.ctx.shadowBlur = 10; this.ctx.shadowColor = 'var(--info-color)';
+                        this.ctx.beginPath(); this.ctx.arc(proj.x, proj.y, 4, 0, Math.PI*2); this.ctx.fill(); this.ctx.shadowBlur = 0;
+
+                        if (proj.target && Math.hypot(proj.target.screenX - proj.x, proj.target.screenY - proj.y) < 15) {
+                            proj.target.hull -= 100; // Torpedoes are lethal
+                            if (proj.target.hull <= 0) proj.target.alive = false;
+                            this.triggerExplosion(proj.target.screenX, proj.target.screenY);
+                            this.projectiles.splice(pIdx, 1);
+                        } else if (proj.x < 0 || proj.x > this.canvas.width || proj.y < 0 || proj.y > this.canvas.height) {
+                            this.projectiles.splice(pIdx, 1); // Delete if offscreen
+                        }
+                    }
+                });
+
+                // Particles
+                this.ctx.globalAlpha = 1.0;
+                this.particles.forEach((pt, idx) => {
+                    pt.x += pt.vx; pt.y += pt.vy; pt.life -= 0.03;
+                    if (pt.life <= 0) { this.particles.splice(idx, 1); return; }
+                    this.ctx.fillStyle = pt.color; this.ctx.globalAlpha = pt.life;
+                    this.ctx.beginPath(); this.ctx.arc(pt.x, pt.y, pt.life * 5, 0, Math.PI*2); this.ctx.fill();
+                });
+                this.ctx.globalAlpha = 1.0;
+
+                // Tactical Sensor Ring
+                this.ctx.strokeStyle = 'rgba(57, 255, 20, 0.15)'; this.ctx.setLineDash([5,5]);
+                this.ctx.beginPath(); this.ctx.arc(cx, cy, this.globeRadius + 120, 0, Math.PI*2); this.ctx.stroke(); this.ctx.setLineDash([]);
+
+                // Draw Custom Crosshair
+                if (this.mouseX > 0 && this.mouseY > 0) {
+                    let drawX = this.mouseX; let drawY = this.mouseY;
+                    let isHovering = false;
+
+                    // Magnetic snap
+                    this.entities.forEach(tgt => {
+                        if(tgt.type === 'enemy' && tgt.alive && !tgt.isOccluded) {
+                            if (Math.hypot(tgt.screenX - this.mouseX, tgt.screenY - this.mouseY) < 30) {
+                                drawX += (tgt.screenX - drawX) * 0.4;
+                                drawY += (tgt.screenY - drawY) * 0.4;
+                                isHovering = true;
+                            }
+                        }
+                    });
+
+                    this.ctx.strokeStyle = isHovering ? 'var(--alert-color)' : 'rgba(57, 255, 20, 0.8)';
+                    this.ctx.lineWidth = 1;
+                    
+                    this.ctx.beginPath(); this.ctx.arc(drawX, drawY, 2, 0, Math.PI * 2); this.ctx.stroke();
+                    this.ctx.beginPath(); this.ctx.arc(drawX, drawY, 20, 0, Math.PI * 2); this.ctx.stroke();
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(drawX - 30, drawY); this.ctx.lineTo(drawX - 10, drawY);
+                    this.ctx.moveTo(drawX + 10, drawY); this.ctx.lineTo(drawX + 30, drawY);
+                    this.ctx.moveTo(drawX, drawY - 30); this.ctx.lineTo(drawX, drawY - 10);
+                    this.ctx.moveTo(drawX, drawY + 10); this.ctx.lineTo(drawX, drawY + 30);
+                    this.ctx.stroke();
+                }
+
+                requestAnimationFrame(() => this.renderLoop());
+            }
+
+            // --- UI & STATE ACTIONS ---
+            log(msg) {
+                const logDiv = document.getElementById('comms-log');
+                const now = new Date();
+                const ts = `${now.getHours()}${now.getMinutes().toString().padStart(2,'0')} hrs`;
+                const el = document.createElement('div'); el.className = 'log-entry';
+                el.innerHTML = `<span class="log-time">${ts}</span> ${msg}`;
+                logDiv.prepend(el);
+            }
+
+            clearComms() { document.getElementById('comms-log').innerHTML = ''; }
+
+            hyperwarpJump() {
+                if (this.systems.fuel < 20) { this.log("Insufficient dilithium for emergency jump."); return; }
+                this.systems.fuel -= 20;
+                this.playSound('warp');
+                this.entities = []; // Clear orbit
+                this.clearLock();
+                this.log("EMERGENCY JUMP EXECUTED. Evaded hostile contacts.");
+                this.updateUI();
+                setTimeout(() => this.spawnEnvironment(), 3000);
+            }
+
+            repairSystems() {
+                if (this.resources.dilithium < 10) return;
+                this.resources.dilithium -= 10;
+                this.systems.shields = Math.min(100, this.systems.shields + 25);
+                this.systems.lifeSupport = Math.min(100, this.systems.lifeSupport + 20);
+                this.log("Engineering: Shields and Life Support restored.");
+                this.updateUI();
+            }
+
+            sendAwayTeam() {
+                if (this.awayTeam.length > 0) { this.log("Away team already deployed."); return; }
+
+                let pool = [...this.crew];
+                for(let i=0; i<2; i++) {
+                    const idx = Math.floor(Math.random() * pool.length);
+                    this.awayTeam.push(pool.splice(idx, 1)[0]);
+                }
+                
+                this.playSound('warp');
+                this.log(`Transporter Room: Beaming team to planetary surface.`);
+                document.getElementById('btn-away-team').disabled = true;
+                this.updateUI();
+            }
+
+            teleportCrew(index) {
+                this.playSound('warp');
+                this.log(`Emergency transport: ${this.awayTeam[index].name} recalled to ship.`);
+                this.awayTeam.splice(index, 1);
+                if (this.awayTeam.length === 0) document.getElementById('btn-away-team').disabled = false;
+                this.updateUI();
+            }
+
+            updateUI() {
+                ['fuel', 'morale', 'life-support', 'shields'].forEach(sys => {
+                    const val = this.systems[sys.replace('-', '')] || this.systems[sys]; 
+                    const el = document.getElementById(`${sys}-value`);
+                    if(el) el.innerText = `${val}%`;
+                    const bar = document.getElementById(`${sys.split('-')[0]}-bar`);
+                    if(bar) bar.style.width = `${val}%`;
+                });
+
+                const awayStatus = document.getElementById('away-team-status');
+                const awayList = document.getElementById('away-team-list');
+                awayList.innerHTML = '';
+
+                if (this.awayTeam.length === 0) {
+                    awayStatus.innerText = "No active away teams.";
+                    awayStatus.style.color = "var(--primary-color)";
+                    document.getElementById('btn-away-team').disabled = false;
+                } else {
+                    awayStatus.innerHTML = `TEAM ACTIVE (${this.awayTeam.length} crew) <br> <span style="font-size:0.8em; color:var(--warn-color)">WARNING: Harsh surface conditions</span>`;
+                    this.awayTeam.forEach((mem, idx) => {
+                        let color = 'var(--primary-color)';
+                        if (mem.health < 30) color = 'var(--alert-color)';
+                        else if (mem.health < 60) color = 'var(--warn-color)';
+
+                        awayList.innerHTML += `
+                            <div class="crew-member">
+                                <div><strong>${mem.name}</strong><br><span class="crew-status">${mem.role}</span></div>
+                                <div style="text-align: right;">
+                                    <span style="font-size: 0.8em; color: ${color};">${mem.health}%</span>
+                                    <div class="health-bar" style="width: 80px;"><div class="health-fill" style="width: ${mem.health}%; background-color: ${color};"></div></div>
+                                    ${mem.health < 50 ? `<button onclick="game.teleportCrew(${idx})" style="font-size: 0.7em; margin-top: 5px; padding: 2px 5px; border-color: var(--alert-color); color: var(--alert-color);">BEAM UP</button>` : ''}
+                                </div>
+                            </div>`;
+                    });
+                }
+            }
+        }
+
+        window.onload = () => { window.game = new USSAtlasGame(); };
+    </script>
+</body>
+</html>        .crew-list { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; }
         .crew-member {
             background-color: rgba(57,255,20,0.1); padding: 8px; border-radius: 4px;
             display: flex; justify-content: space-between; align-items: center; border-left: 3px solid var(--primary-color);

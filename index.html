@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>USS Atlas Bridge Simulator</title>
+    <title>USS Atlas Bridge Simulator - Tactical 3D</title>
     <style>
         :root {
             --bg-color: #050a10;
             --screen-bg: #0a1420;
-            --primary-color: #39ff14; /* Starfleet Green */
+            --primary-color: #39ff14; 
             --alert-color: #ff3333;
             --warn-color: #ffaa00;
             --info-color: #33ccff;
@@ -24,45 +24,673 @@
         }
 
         #bridge {
-            display: grid; grid-template-columns: 250px 1fr 300px; grid-template-rows: 80px 1fr 250px;
+            display: grid; grid-template-columns: 280px 1fr 300px; grid-template-rows: 80px 1fr 250px;
             gap: 10px; padding: 15px; height: 100vh;
         }
 
         .panel {
             background-color: var(--screen-bg); border: var(--panel-border); border-radius: 8px;
             padding: 15px; box-shadow: inset 0 0 20px rgba(0,0,0,0.6); position: relative;
+            display: flex; flex-direction: column;
         }
 
         .header-bar {
             background-color: #1a2330; border-bottom: var(--panel-border); padding: 10px;
             text-align: center; font-weight: bold; letter-spacing: 2px; color: var(--info-color); margin-bottom: 15px;
+            flex-shrink: 0;
         }
 
-        .top-left { grid-column: 1; grid-row: 1; }
+        .top-left { grid-column: 1; grid-row: 1 / span 2; }
         .main-view-container { grid-column: 2; grid-row: 1 / span 3; display: flex; flex-direction: column; gap: 10px; }
-        .top-right { grid-column: 3; grid-row: 1; }
+        .top-right { grid-column: 3; grid-row: 1 / span 2; }
 
         #main-view {
-            flex-grow: 1; background-color: black; border-radius: 4px; position: relative;
-            overflow: hidden; box-shadow: inset 0 0 50px rgba(0,0,0,0.8); cursor: crosshair;
+            flex-grow: 1; background-color: #020508; border-radius: 4px; position: relative;
+            overflow: hidden; box-shadow: inset 0 0 50px rgba(0,0,0,0.9); cursor: crosshair;
         }
 
-        canvas#tactical-display { width: 100%; height: 100%; display: block; cursor: none; }
+        canvas#tactical-display { width: 100%; height: 100%; display: block; }
 
         .view-overlay { position: absolute; top: 20px; left: 20px; font-size: 1.2em; text-shadow: var(--text-shadow); pointer-events: none; }
 
         .bottom-left { grid-column: 1; grid-row: 3; }
-        .bridge-controls { grid-column: 2; grid-row: 3; display: flex; gap: 10px; justify-content: space-between; align-items: center; padding-top: 0; }
+        .bridge-controls { grid-column: 2; grid-row: 3; display: flex; gap: 10px; justify-content: space-between; padding-top: 0; }
         .bottom-right { grid-column: 3; grid-row: 3; }
 
         .system-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .system-item { display: flex; flex-direction: column; gap: 8px; }
-        .system-label { font-weight: bold; color: var(--info-color); }
-        .slider-container { display: flex; align-items: center; gap: 10px; }
+        .system-label { font-weight: bold; color: var(--info-color); font-size: 0.9em; }
         
-        input[type="range"] { width: 100%; accent-color: var(--primary-color); cursor: pointer; }
+        .crew-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex-grow: 1; padding-right: 5px;}
+        .crew-member {
+            background-color: rgba(57,255,20,0.05); padding: 8px; border-radius: 4px;
+            display: flex; justify-content: space-between; align-items: center; border-left: 3px solid var(--primary-color);
+        }
+        
+        .health-bar { width: 80px; height: 6px; background-color: #2a3b55; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+        .health-fill { height: 100%; transition: width 0.2s, background-color 0.5s; }
 
-        .crew-list { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; }
+        #comms-log { font-size: 0.85em; line-height: 1.4; overflow-y: auto; flex-grow: 1; padding-right: 5px; }
+        .log-entry { margin-bottom: 6px; border-bottom: 1px solid rgba(57,255,20,0.2); padding-bottom: 4px; }
+        .log-time { color: var(--info-color); font-size: 0.8em; margin-right: 5px; }
+
+        button {
+            background-color: rgba(57,255,20,0.1); color: var(--primary-color); border: 1px solid var(--primary-color);
+            padding: 8px 12px; font-family: inherit; cursor: pointer; transition: all 0.2s; font-weight: bold;
+        }
+        button:hover:not(:disabled) { background-color: rgba(57,255,20,0.3); box-shadow: 0 0 10px var(--primary-color); }
+        button:disabled { border-color: #444; color: #555; background: transparent; cursor: not-allowed; }
+        button:active:not(:disabled) { transform: scale(0.98); }
+
+        .btn-alert { border-color: var(--alert-color); color: var(--alert-color); background: rgba(255,51,51,0.1); }
+        .btn-alert:hover:not(:disabled) { background-color: rgba(255,51,51,0.3); box-shadow: 0 0 10px var(--alert-color); }
+        
+        .btn-warn { border-color: var(--warn-color); color: var(--warn-color); background: rgba(255,170,0,0.1); }
+        .btn-warn:hover:not(:disabled) { background-color: rgba(255,170,0,0.3); box-shadow: 0 0 10px var(--warn-color); }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1a2330; }
+        ::-webkit-scrollbar-thumb { background: var(--primary-color); border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div id="bridge">
+        <div class="panel top-left">
+            <div class="header-bar">AWAY TEAM STATUS</div>
+            <div style="margin-bottom: 15px; text-align: center;">
+                <button id="btn-deploy" onclick="game.deployAwayTeam()" style="width: 100%;">DEPLOY TO SURFACE</button>
+                <div id="away-status-text" style="margin-top: 10px; font-size: 0.9em; color: var(--info-color);">TEAM ABOARD</div>
+            </div>
+            <div class="crew-list" id="crew-list">
+                </div>
+        </div>
+
+        <div class="main-view-container">
+            <div class="panel" style="padding: 0;">
+                <div id="main-view">
+                    <canvas id="tactical-display"></canvas>
+                    <div class="view-overlay">
+                        <strong>SENSORS:</strong> <span id="sensor-readings" style="color: var(--warn-color);">SCANNING LOCAL SPACE</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel bridge-controls">
+                <div style="width: 48%; display: flex; flex-direction: column; gap: 10px;">
+                    <div class="header-bar" style="margin-bottom: 0;">ORDNANCE CONTROL</div>
+                    <div class="system-grid">
+                        <div class="system-item">
+                            <button id="fire-phaser" disabled>PHASER ARRAYS [∞]</button>
+                        </div>
+                        <div class="system-item">
+                            <button id="fire-torpedo" disabled>PHOTON TORP [<span id="torpedo-count">12</span>]</button>
+                        </div>
+                        <div class="system-item" style="grid-column: span 2;">
+                            <button class="btn-warn" id="fire-pulsar" disabled>QUANTUM PULSAR [<span id="pulsar-count">4</span>]</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="width: 48%; display: flex; flex-direction: column; gap: 10px;">
+                    <div class="header-bar" style="margin-bottom: 0;">TARGETING COMPUTER</div>
+                    <div id="target-locks" style="background: rgba(0,0,0,0.5); padding: 10px; border: 1px solid var(--info-color); border-radius: 4px; min-height: 80px; font-size: 0.9em;">
+                        <div style="color: var(--warn-color); text-align: center; margin-top: 15px;">NO TARGETS LOCKED</div>
+                    </div>
+                    <button class="btn-alert" onclick="game.hyperwarpJump()" style="margin-top: auto;">EMERGENCY EVASIVE</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel top-right">
+            <div class="header-bar">SHIP SYSTEMS</div>
+            <div class="system-grid" style="margin-bottom: 20px;">
+                <div class="system-item">
+                    <div class="system-label">SHIELDS <span id="val-shields" style="float:right;">100%</span></div>
+                    <div class="health-bar" style="width: 100%;"><div class="health-fill" id="bar-shields" style="width: 100%; background-color: var(--info-color);"></div></div>
+                </div>
+                <div class="system-item">
+                    <div class="system-label">HULL <span id="val-hull" style="float:right;">100%</span></div>
+                    <div class="health-bar" style="width: 100%;"><div class="health-fill" id="bar-hull" style="width: 100%; background-color: var(--primary-color);"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel bottom-right">
+            <div class="header-bar">COMMUNICATIONS LOG</div>
+            <div id="comms-log"></div>
+            <button onclick="game.clearComms()" style="width: 100%; margin-top: 10px; font-size: 0.8em; flex-shrink: 0;">CLEAR LOG</button>
+        </div>
+    </div>
+
+    <script>
+        class USSAtlasGame {
+            constructor() {
+                // Systems
+                this.systems = { shields: 100, hull: 100 };
+                this.ammo = { torpedoes: 12, pulsars: 4 };
+
+                // Away Team Data (7 Members)
+                this.crew = [
+                    { id: 1, name: "CMDR VANCE", role: "XO", hp: 100, deployed: false },
+                    { id: 2, name: "LT KOWALSKI", role: "SEC", hp: 100, deployed: false },
+                    { id: 3, name: "ENS CHEN", role: "SCI", hp: 100, deployed: false },
+                    { id: 4, name: "DR ARIS", role: "MED", hp: 100, deployed: false },
+                    { id: 5, name: "SGT MAJOR", role: "TAC", hp: 100, deployed: false },
+                    { id: 6, name: "SPEC TARN", role: "ENG", hp: 100, deployed: false },
+                    { id: 7, name: "ENG RIZZO", role: "OPS", hp: 100, deployed: false }
+                ];
+                this.missionActive = false;
+                
+                // Canvas & 3D Math
+                this.canvas = document.getElementById('tactical-display');
+                this.ctx = this.canvas.getContext('2d');
+                this.mouseX = -100; this.mouseY = -100;
+                
+                this.globeNodes = [];
+                this.globeRadius = 160;
+                this.angleX = 0.35; // Tilt
+                this.angleY = 0;    // Rotation
+
+                this.targets = [];
+                this.lockedTargets = []; // Max 2
+                this.projectiles = [];
+                this.particles = [];
+                
+                this.shipX = 0; this.shipY = 0;
+                this.audioCtx = null;
+                this.timeElapsed = 0;
+
+                this.init();
+            }
+
+            init() {
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+
+                // Generate 3D Globe Wireframe
+                for (let lat = -90; lat <= 90; lat += 15) {
+                    for (let lon = 0; lon < 360; lon += 15) {
+                        const latRad = lat * (Math.PI / 180);
+                        const lonRad = lon * (Math.PI / 180);
+                        this.globeNodes.push({
+                            x: this.globeRadius * Math.cos(latRad) * Math.cos(lonRad),
+                            y: this.globeRadius * Math.sin(latRad),
+                            z: this.globeRadius * Math.cos(latRad) * Math.sin(lonRad)
+                        });
+                    }
+                }
+
+                // Input Handling
+                this.canvas.addEventListener('mousemove', (e) => {
+                    const rect = this.canvas.getBoundingClientRect();
+                    this.mouseX = e.clientX - rect.left; this.mouseY = e.clientY - rect.top;
+                });
+                this.canvas.addEventListener('mouseleave', () => { this.mouseX = -100; this.mouseY = -100; });
+                this.canvas.addEventListener('mousedown', () => this.attemptLock());
+
+                document.getElementById('fire-phaser').addEventListener('click', () => this.fireWeapon('phaser'));
+                document.getElementById('fire-torpedo').addEventListener('click', () => this.fireWeapon('torpedo'));
+                document.getElementById('fire-pulsar').addEventListener('click', () => this.fireWeapon('pulsar'));
+
+                this.log("USS Atlas systems online. Assuming standard orbit.");
+                this.renderCrewUI();
+
+                // Start Loops
+                setInterval(() => this.systemTick(), 1000); 
+                requestAnimationFrame(() => this.renderLoop()); 
+            }
+
+            resizeCanvas() {
+                const rect = document.getElementById('main-view').getBoundingClientRect();
+                this.canvas.width = rect.width; this.canvas.height = rect.height;
+                this.shipX = this.canvas.width / 2; this.shipY = this.canvas.height;
+            }
+
+            // --- AUDIO ENGINE ---
+            initAudio() {
+                if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+            }
+
+            playSound(type) {
+                this.initAudio();
+                const osc = this.audioCtx.createOscillator(); const gain = this.audioCtx.createGain();
+                osc.connect(gain); gain.connect(this.audioCtx.destination);
+                const now = this.audioCtx.currentTime;
+
+                if (type === 'lock') {
+                    osc.type = 'square'; osc.frequency.setValueAtTime(1200, now);
+                    gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now); osc.stop(now + 0.1);
+                } else if (type === 'phaser') {
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(150, now + 0.2);
+                    gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now); osc.stop(now + 0.2);
+                } else if (type === 'torpedo') {
+                    osc.type = 'square'; osc.frequency.setValueAtTime(300, now); osc.frequency.linearRampToValueAtTime(80, now + 0.4);
+                    gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    osc.start(now); osc.stop(now + 0.4);
+                } else if (type === 'pulsar') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(50, now); osc.frequency.exponentialRampToValueAtTime(600, now + 0.5); osc.frequency.exponentialRampToValueAtTime(20, now + 1.5);
+                    gain.gain.setValueAtTime(0.4, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 2.0);
+                    osc.start(now); osc.stop(now + 2.0);
+                } else if (type === 'explosion') {
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, now); osc.frequency.exponentialRampToValueAtTime(10, now + 0.6);
+                    gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 1.0);
+                    osc.start(now); osc.stop(now + 1.0);
+                } else if (type === 'teleport') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(1200, now + 1.0);
+                    gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 1.0);
+                    osc.start(now); osc.stop(now + 1.0);
+                } else if (type === 'alert') {
+                    osc.type = 'square'; osc.frequency.setValueAtTime(600, now); osc.frequency.setValueAtTime(400, now + 0.3);
+                    gain.gain.setValueAtTime(0.05, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.6);
+                    osc.start(now); osc.stop(now + 0.6);
+                }
+            }
+
+            // --- 1HZ LOGIC & AWAY TEAM ---
+            systemTick() {
+                this.timeElapsed++;
+
+                // Spawn Enemies
+                if (Math.random() < 0.2 && this.targets.length < 6) {
+                    this.targets.push({
+                        id: 'BOP-' + Math.floor(Math.random()*8999+1000),
+                        orbitAlt: this.globeRadius + 50 + Math.random() * 80,
+                        angle: Math.random() * Math.PI * 2,
+                        speed: (Math.random() * 0.015 + 0.005) * (Math.random() > 0.5 ? 1 : -1),
+                        inclination: (Math.random() - 0.5) * 1.2,
+                        hull: 100, alive: true
+                    });
+                    document.getElementById('sensor-readings').innerText = "HOSTILE CONTACT DETECTED";
+                }
+
+                // Away Team Logic
+                if (this.missionActive) {
+                    let teamAlive = false;
+                    this.crew.forEach(c => {
+                        if (c.deployed && c.hp > 0) {
+                            teamAlive = true;
+                            if (Math.random() > 0.4) {
+                                c.hp -= (Math.random() * 8 + 2); // Take 2-10 damage
+                                if (c.hp <= 0) { c.hp = 0; this.playSound('alert'); this.log(`TRAGEDY: ${c.name} lost on surface.`); }
+                                else if (c.hp < 30 && Math.random() > 0.7) { this.playSound('alert'); this.log(`WARNING: ${c.name} taking heavy fire!`); }
+                            }
+                        }
+                    });
+                    
+                    if (!teamAlive) {
+                        this.missionActive = false;
+                        document.getElementById('btn-deploy').disabled = false;
+                        document.getElementById('away-status-text').innerText = "ALL HANDS LOST";
+                        document.getElementById('away-status-text').style.color = "var(--alert-color)";
+                    }
+                    this.renderCrewUI();
+                } else {
+                    // Passive heal on ship
+                    let healed = false;
+                    this.crew.forEach(c => {
+                        if (!c.deployed && c.hp > 0 && c.hp < 100) { c.hp = Math.min(100, c.hp + 5); healed = true; }
+                    });
+                    if(healed) this.renderCrewUI();
+                }
+            }
+
+            deployAwayTeam() {
+                const available = this.crew.filter(c => c.hp > 50 && !c.deployed);
+                if (available.length === 0) { this.log("No able-bodied crew available for deployment."); return; }
+
+                this.playSound('teleport');
+                this.missionActive = true;
+                document.getElementById('btn-deploy').disabled = true;
+                document.getElementById('away-status-text').innerText = "SURFACE OPERATIONS ACTIVE";
+                document.getElementById('away-status-text').style.color = "var(--warn-color)";
+
+                // Deploy everyone who is fit
+                available.forEach(c => c.deployed = true);
+                this.log(`Transporter Room: Away team beamed to hostile surface.`);
+                this.renderCrewUI();
+            }
+
+            beamUpMember(id) {
+                const member = this.crew.find(c => c.id === id);
+                if(member && member.deployed) {
+                    this.playSound('teleport');
+                    member.deployed = false;
+                    this.log(`Emergency Transport: ${member.name} beamed to sickbay.`);
+                    
+                    // Check if anyone is left
+                    if (!this.crew.some(c => c.deployed && c.hp > 0)) {
+                        this.missionActive = false;
+                        document.getElementById('btn-deploy').disabled = false;
+                        document.getElementById('away-status-text').innerText = "TEAM ABOARD";
+                        document.getElementById('away-status-text').style.color = "var(--info-color)";
+                    }
+                    this.renderCrewUI();
+                }
+            }
+
+            renderCrewUI() {
+                const list = document.getElementById('crew-list');
+                list.innerHTML = '';
+                this.crew.forEach(c => {
+                    let color = 'var(--primary-color)';
+                    if (c.hp < 30) color = 'var(--alert-color)';
+                    else if (c.hp < 60) color = 'var(--warn-color)';
+
+                    const statusTxt = c.hp <= 0 ? 'KIA' : (c.deployed ? 'AWAY' : 'ABOARD');
+                    const btnHtml = (c.deployed && c.hp > 0) ? `<button class="btn-alert" style="padding: 4px 8px; font-size: 0.7em;" onclick="game.beamUpMember(${c.id})">BEAM UP</button>` : '';
+
+                    list.innerHTML += `
+                        <div class="crew-member">
+                            <div style="flex-grow: 1;">
+                                <div style="display:flex; justify-content:space-between; font-weight:bold; color:${c.hp<=0?'#555':'#fff'};">
+                                    <span>${c.name}</span> <span style="font-size:0.8em; color:${color}">${statusTxt}</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:10px; margin-top:4px;">
+                                    <span class="crew-status">${c.role}</span>
+                                    <div class="health-bar"><div class="health-fill" style="width: ${c.hp}%; background-color: ${color};"></div></div>
+                                </div>
+                            </div>
+                            <div style="margin-left: 10px;">${btnHtml}</div>
+                        </div>`;
+                });
+            }
+
+            // --- COMBAT & MATH ---
+            project3D(x, y, z, cx, cy, cosX, sinX, cosY, sinY) {
+                let x1 = x * cosY - z * sinY; let z1 = z * cosY + x * sinY;
+                let y2 = y * cosX - z1 * sinX; let z2 = z1 * cosX + y * sinX;
+                
+                // Deep fish-eye perspective for severe 3D effect
+                const scale = 250 / (250 + z2); 
+                return { px: cx + x1 * scale, py: cy + y2 * scale, scale: scale, depth: z2 };
+            }
+
+            attemptLock() {
+                this.initAudio();
+                let hit = null; let minDist = 30;
+
+                this.targets.forEach(tgt => {
+                    if (tgt.alive && !tgt.isOccluded) {
+                        const dist = Math.hypot(tgt.screenX - this.mouseX, tgt.screenY - this.mouseY);
+                        if (dist < minDist) { minDist = dist; hit = tgt; }
+                    }
+                });
+
+                if (hit) {
+                    const idx = this.lockedTargets.indexOf(hit);
+                    if (idx > -1) {
+                        this.lockedTargets.splice(idx, 1); // Unlock if clicked again
+                    } else if (this.lockedTargets.length < 2) {
+                        this.lockedTargets.push(hit); // Max 2 locks
+                        this.playSound('lock');
+                    }
+                } else {
+                    this.lockedTargets = []; // Click empty space to clear all
+                }
+                this.updateTargetUI();
+            }
+
+            updateTargetUI() {
+                this.lockedTargets = this.lockedTargets.filter(t => t.alive);
+                const container = document.getElementById('target-locks');
+                
+                if (this.lockedTargets.length === 0) {
+                    container.innerHTML = '<div style="color: var(--warn-color); text-align: center; margin-top: 15px;">NO TARGETS LOCKED</div>';
+                    document.getElementById('fire-phaser').disabled = true;
+                    document.getElementById('fire-torpedo').disabled = true;
+                    document.getElementById('fire-pulsar').disabled = true;
+                    return;
+                }
+
+                let html = '';
+                this.lockedTargets.forEach((t, i) => {
+                    html += `<div style="display:flex; justify-content:space-between; margin-bottom:5px; border-bottom:1px dashed #33ccff; padding-bottom:4px;">
+                                <span style="color:#fff;">TRK-${i+1} [${t.id}]</span>
+                                <span style="color:var(--alert-color); font-weight:bold;">LOCKED</span>
+                             </div>`;
+                });
+                container.innerHTML = html;
+
+                document.getElementById('fire-phaser').disabled = false;
+                document.getElementById('fire-torpedo').disabled = this.ammo.torpedoes <= 0;
+                document.getElementById('fire-pulsar').disabled = this.ammo.pulsars <= 0;
+            }
+
+            fireWeapon(type) {
+                if (this.lockedTargets.length === 0) return;
+
+                if (type === 'phaser') {
+                    this.playSound('phaser');
+                    this.lockedTargets.forEach(tgt => {
+                        this.projectiles.push({ type: 'beam', target: tgt, progress: 0 });
+                    });
+                } else if (type === 'torpedo' && this.ammo.torpedoes > 0) {
+                    this.playSound('torpedo');
+                    this.ammo.torpedoes--; document.getElementById('torpedo-count').innerText = this.ammo.torpedoes;
+                    
+                    // Torpedoes fire sequentially if 2 are locked
+                    this.lockedTargets.forEach((tgt, i) => {
+                        setTimeout(() => {
+                            if(tgt.alive) {
+                                const angle = Math.atan2(tgt.screenY - this.shipY, tgt.screenX - this.canvas.width/2);
+                                this.projectiles.push({ type: 'torpedo', target: tgt, x: this.canvas.width/2, y: this.shipY, angle: angle, speed: 7 });
+                            }
+                        }, i * 300);
+                    });
+                    this.updateTargetUI();
+                } else if (type === 'pulsar' && this.ammo.pulsars > 0) {
+                    this.playSound('pulsar');
+                    this.ammo.pulsars--; document.getElementById('pulsar-count').innerText = this.ammo.pulsars;
+                    this.projectiles.push({ type: 'pulsar', radius: 0 });
+                    
+                    // Kills all active targets on screen
+                    this.targets.forEach(tgt => {
+                        if (tgt.alive && !tgt.isOccluded) {
+                            setTimeout(() => {
+                                tgt.alive = false;
+                                this.triggerExplosion(tgt.screenX, tgt.screenY);
+                            }, Math.random() * 800 + 400); // Shrapnel cascade delay
+                        }
+                    });
+                    this.lockedTargets = [];
+                    this.updateTargetUI();
+                }
+            }
+
+            triggerExplosion(x, y) {
+                this.playSound('explosion');
+                for(let i=0; i<35; i++) {
+                    this.particles.push({
+                        x: x, y: y,
+                        vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 0.5) * 15,
+                        life: 1.0, color: Math.random() > 0.5 ? '#ffaa00' : '#ff3333'
+                    });
+                }
+                this.updateTargetUI();
+            }
+
+            // --- 60HZ RENDER LOOP ---
+            renderLoop() {
+                const w = this.canvas.width; const h = this.canvas.height;
+                const cx = w / 2; const cy = h / 2;
+
+                this.ctx.fillStyle = '#020508';
+                this.ctx.fillRect(0, 0, w, h);
+
+                // Deep Space Grid
+                this.ctx.strokeStyle = 'rgba(51, 204, 255, 0.05)'; this.ctx.lineWidth = 1;
+                this.ctx.beginPath(); this.ctx.moveTo(cx, 0); this.ctx.lineTo(cx, h); this.ctx.moveTo(0, cy); this.ctx.lineTo(w, cy); this.ctx.stroke();
+
+                // 3D Matrix Math
+                this.angleY += 0.005; // Constant rotation
+                const cosX = Math.cos(this.angleX), sinX = Math.sin(this.angleX);
+                const cosY = Math.cos(this.angleY), sinY = Math.sin(this.angleY);
+
+                // 1. Draw Globe
+                this.ctx.fillStyle = 'var(--primary-color)';
+                this.globeNodes.forEach(n => {
+                    const p = this.project3D(n.x, n.y, n.z, cx, cy, cosX, sinX, cosY, sinY);
+                    this.ctx.globalAlpha = p.depth > 0 ? 0.1 : 0.6;
+                    this.ctx.fillRect(p.px, p.py, 2, 2);
+                });
+                
+                // Draw wireframe latitude rings to enforce 3D look
+                this.ctx.strokeStyle = 'rgba(57, 255, 20, 0.1)';
+                for (let lat = -90; lat <= 90; lat += 30) {
+                    this.ctx.beginPath();
+                    for (let lon = 0; lon <= 360; lon += 15) {
+                        const lr = lat * Math.PI/180; const lnr = lon * Math.PI/180;
+                        const x = this.globeRadius * Math.cos(lr) * Math.cos(lnr);
+                        const y = this.globeRadius * Math.sin(lr);
+                        const z = this.globeRadius * Math.cos(lr) * Math.sin(lnr);
+                        const p = this.project3D(x, y, z, cx, cy, cosX, sinX, cosY, sinY);
+                        if (lon === 0) this.ctx.moveTo(p.px, p.py); else this.ctx.lineTo(p.px, p.py);
+                    }
+                    this.ctx.stroke();
+                }
+
+                // 2. Draw Targets
+                this.targets.forEach((tgt, idx) => {
+                    if(!tgt.alive) return;
+                    tgt.angle += tgt.speed;
+                    
+                    const tx = tgt.orbitAlt * Math.cos(tgt.angle);
+                    const ty = tgt.orbitAlt * Math.sin(tgt.angle) * tgt.inclination;
+                    const tz = tgt.orbitAlt * Math.sin(tgt.angle);
+
+                    const p = this.project3D(tx, ty, tz, cx, cy, cosX, sinX, cosY, sinY);
+                    tgt.screenX = p.px; tgt.screenY = p.py;
+                    
+                    tgt.isOccluded = (p.depth > 0 && Math.hypot(p.px - cx, p.py - cy) < this.globeRadius * 0.9);
+
+                    if (!tgt.isOccluded) {
+                        this.ctx.globalAlpha = 1.0;
+                        this.ctx.strokeStyle = '#ff3333'; this.ctx.lineWidth = 1.5;
+                        const s = 6 * p.scale;
+                        this.ctx.beginPath(); this.ctx.moveTo(p.px, p.py - s); this.ctx.lineTo(p.px + s, p.py + s); this.ctx.lineTo(p.px - s, p.py + s); this.ctx.closePath(); this.ctx.stroke();
+                        
+                        this.ctx.fillStyle = '#ff3333'; this.ctx.font = "10px monospace"; this.ctx.fillText(tgt.id, p.px + 10, p.py);
+
+                        // Health Bar
+                        const hpPct = Math.max(0, tgt.hull / 100);
+                        this.ctx.fillStyle = '#f00'; this.ctx.fillRect(p.px - 10, p.py + 10, 20, 3);
+                        this.ctx.fillStyle = '#0f0'; this.ctx.fillRect(p.px - 10, p.py + 10, 20 * hpPct, 3);
+
+                        if (this.lockedTargets.includes(tgt)) {
+                            this.ctx.strokeStyle = 'var(--alert-color)';
+                            const box = 15 * p.scale + Math.sin(Date.now() / 150) * 3;
+                            this.ctx.strokeRect(p.px - box, p.py - box, box*2, box*2);
+                            
+                            // Target tracking line to ship
+                            this.ctx.strokeStyle = 'rgba(255, 51, 51, 0.2)'; this.ctx.setLineDash([4,4]);
+                            this.ctx.beginPath(); this.ctx.moveTo(cx, this.shipY); this.ctx.lineTo(p.px, p.py); this.ctx.stroke(); this.ctx.setLineDash([]);
+                        }
+                    }
+                });
+
+                // Clear dead
+                this.targets = this.targets.filter(t => t.alive);
+
+                // 3. Projectiles
+                this.projectiles.forEach((proj, pIdx) => {
+                    if (proj.type === 'beam') {
+                        proj.progress += 0.15;
+                        if (proj.progress >= 1) {
+                            proj.target.hull -= 34; // 3 shots to kill
+                            if (proj.target.hull <= 0) proj.target.alive = false;
+                            this.triggerExplosion(proj.target.screenX, proj.target.screenY);
+                            this.projectiles.splice(pIdx, 1); return;
+                        }
+                        const bx = cx + (proj.target.screenX - cx) * proj.progress; const by = this.shipY + (proj.target.screenY - this.shipY) * proj.progress;
+                        this.ctx.strokeStyle = '#fff'; this.ctx.lineWidth = 3; this.ctx.shadowBlur = 10; this.ctx.shadowColor = 'var(--alert-color)';
+                        this.ctx.beginPath(); this.ctx.moveTo(cx, this.shipY); this.ctx.lineTo(bx, by); this.ctx.stroke(); this.ctx.shadowBlur = 0;
+                    } else if (proj.type === 'torpedo') {
+                        // 2D Homing
+                        if (proj.target && proj.target.alive && !proj.target.isOccluded) {
+                            const tgtAngle = Math.atan2(proj.target.screenY - proj.y, proj.target.screenX - proj.x);
+                            let aDiff = tgtAngle - proj.angle;
+                            while(aDiff < -Math.PI) aDiff += Math.PI*2; while(aDiff > Math.PI) aDiff -= Math.PI*2;
+                            proj.angle += aDiff * 0.1;
+                        }
+                        proj.x += Math.cos(proj.angle) * proj.speed; proj.y += Math.sin(proj.angle) * proj.speed;
+
+                        this.ctx.fillStyle = '#fff'; this.ctx.shadowBlur = 15; this.ctx.shadowColor = 'var(--info-color)';
+                        this.ctx.beginPath(); this.ctx.arc(proj.x, proj.y, 4, 0, Math.PI*2); this.ctx.fill(); this.ctx.shadowBlur = 0;
+
+                        if (proj.target && Math.hypot(proj.target.screenX - proj.x, proj.target.screenY - proj.y) < 15) {
+                            proj.target.hull -= 100; // Lethal
+                            if (proj.target.hull <= 0) proj.target.alive = false;
+                            this.triggerExplosion(proj.target.screenX, proj.target.screenY);
+                            this.projectiles.splice(pIdx, 1);
+                        } else if (proj.y < 0 || proj.x < 0 || proj.x > w) {
+                            this.projectiles.splice(pIdx, 1);
+                        }
+                    } else if (proj.type === 'pulsar') {
+                        proj.radius += 12;
+                        if (proj.radius > w) { this.projectiles.splice(pIdx, 1); return; }
+                        this.ctx.strokeStyle = `rgba(255, 170, 0, ${1 - proj.radius/w})`;
+                        this.ctx.lineWidth = 20;
+                        this.ctx.beginPath(); this.ctx.arc(cx, cy, proj.radius, 0, Math.PI*2); this.ctx.stroke();
+                    }
+                });
+
+                // 4. Particles
+                this.ctx.globalAlpha = 1.0;
+                this.particles.forEach((pt, idx) => {
+                    pt.x += pt.vx; pt.y += pt.vy; pt.life -= 0.03;
+                    if (pt.life <= 0) { this.particles.splice(idx, 1); return; }
+                    this.ctx.fillStyle = pt.color; this.ctx.globalAlpha = pt.life;
+                    this.ctx.beginPath(); this.ctx.arc(pt.x, pt.y, pt.life * 5, 0, Math.PI*2); this.ctx.fill();
+                });
+                this.ctx.globalAlpha = 1.0;
+
+                // 5. Crosshair (Magnetic)
+                if (this.mouseX > 0 && this.mouseY > 0) {
+                    let drawX = this.mouseX; let drawY = this.mouseY;
+                    let isHover = false;
+                    this.targets.forEach(tgt => {
+                        if(tgt.alive && !tgt.isOccluded && Math.hypot(tgt.screenX - this.mouseX, tgt.screenY - this.mouseY) < 30) {
+                            drawX += (tgt.screenX - drawX) * 0.4; drawY += (tgt.screenY - drawY) * 0.4; isHover = true;
+                        }
+                    });
+
+                    this.ctx.strokeStyle = isHover ? 'var(--alert-color)' : 'rgba(57, 255, 20, 0.8)'; this.ctx.lineWidth = 1;
+                    this.ctx.beginPath(); this.ctx.arc(drawX, drawY, 2, 0, Math.PI * 2); this.ctx.stroke();
+                    this.ctx.beginPath(); this.ctx.arc(drawX, drawY, 15, 0, Math.PI * 2); this.ctx.stroke();
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(drawX - 25, drawY); this.ctx.lineTo(drawX - 8, drawY);
+                    this.ctx.moveTo(drawX + 8, drawY); this.ctx.lineTo(drawX + 25, drawY);
+                    this.ctx.moveTo(drawX, drawY - 25); this.ctx.lineTo(drawX, drawY - 8);
+                    this.ctx.moveTo(drawX, drawY + 8); this.ctx.lineTo(drawX, drawY + 25);
+                    this.ctx.stroke();
+                }
+
+                requestAnimationFrame(() => this.renderLoop());
+            }
+
+            // --- UTILS ---
+            log(msg) {
+                const logDiv = document.getElementById('comms-log');
+                const d = new Date(); const ts = `${d.getHours()}${d.getMinutes().toString().padStart(2,'0')} hrs`;
+                const el = document.createElement('div'); el.className = 'log-entry';
+                el.innerHTML = `<span class="log-time">${ts}</span> ${msg}`;
+                logDiv.prepend(el);
+            }
+            clearComms() { document.getElementById('comms-log').innerHTML = ''; }
+            hyperwarpJump() {
+                this.playSound('warp'); this.targets = []; this.clearLock();
+                this.log("EMERGENCY JUMP EXECUTED. Evaded hostile contacts.");
+            }
+        }
+
+        window.onload = () => { window.game = new USSAtlasGame(); };
+    </script>
+</body>
+</html>        .crew-list { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; }
         .crew-member {
             background-color: rgba(57,255,20,0.1); padding: 8px; border-radius: 4px;
             display: flex; justify-content: space-between; align-items: center; border-left: 3px solid var(--primary-color);

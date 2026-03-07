@@ -51,7 +51,7 @@
 
         .alert-badge {
             background: var(--crimson); color: #fff; padding: 2px 8px; font-size: 14px;
-            border-radius: 2px; animation: pulse 1s infinite; font-weight: bold; text-shadow: none;
+            border-radius: 2px; animation: pulse 1s infinite; font-weight: bold;
         }
 
         .mfd {
@@ -74,7 +74,7 @@
             font-weight: bold;
         }
 
-        .data-list { padding: 15px; font-size: 13px; display: flex; flex-direction: column; gap: 8px; }
+        .data-list { padding: 15px; font-size: 13px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
         .data-row { display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(0, 240, 255, 0.2); padding-bottom: 4px; }
         .val { color: #fff; text-shadow: 0 0 5px #fff; }
         .val.alert { color: var(--crimson); text-shadow: 0 0 5px var(--crimson); }
@@ -87,11 +87,11 @@
         .bar-fill.eng { background: var(--amber); }
         .bar-thumb { position: absolute; top: -4px; width: 6px; height: 22px; background: #fff; pointer-events: none; box-shadow: 0 0 5px #fff; transition: left 0.1s; }
 
-        #nav-canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+        /* Hides the default cursor over the tactical map */
+        #nav-canvas { width: 100%; height: 100%; display: block; cursor: none; }
         .center-mfd { grid-row: 2; grid-column: 2; border: 1px solid var(--cyan); }
 
         .right-panel { display: grid; grid-template-rows: 1fr auto; gap: 15px; }
-
         .action-grid { display: flex; flex-direction: column; gap: 10px; padding: 15px; }
         
         .exec-btn {
@@ -99,9 +99,9 @@
             font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: bold; letter-spacing: 4px;
             padding: 15px; cursor: pointer; transition: all 0.2s; text-transform: uppercase;
         }
-        .exec-btn:hover { background: var(--crimson); color: #000; box-shadow: 0 0 20px var(--crimson); }
-        .exec-btn:active { transform: scale(0.98); }
-        .exec-btn:disabled { border-color: #555; color: #555; background: transparent; cursor: not-allowed; box-shadow: none; }
+        .exec-btn:hover:not(:disabled) { background: var(--crimson); color: #000; box-shadow: 0 0 20px var(--crimson); }
+        .exec-btn:active:not(:disabled) { transform: scale(0.98); }
+        .exec-btn:disabled { border-color: #444; color: #555; background: transparent; cursor: not-allowed; box-shadow: none; }
 
         .warp-btn { border-color: var(--amber); color: var(--amber); background: rgba(255, 176, 0, 0.1); }
         .warp-btn:hover { background: var(--amber); color: #000; box-shadow: 0 0 20px var(--amber); }
@@ -113,7 +113,7 @@
 
 <div class="layout">
     <div class="header">
-        <h1>[ <span style="color: #fff;">USSC VANGUARD</span> ] TACTICAL BRIDGE <span class="alert-badge">HOSTILE CONTACTS</span></h1>
+        <h1>[ <span style="color: #fff;">USSC VANGUARD</span> ] TACTICAL BRIDGE <span class="alert-badge">MULTIPLE BOGEYS</span></h1>
         <div style="text-align: right; font-size: 18px;">
             <div id="sys-clock">00:00:00 UTC</div>
             <div style="font-size: 12px; color: var(--amber);">SYS: NOMINAL | LOC: ORBITAL</div>
@@ -154,14 +154,14 @@
         <div class="mfd">
             <div class="mfd-title" style="color: var(--amber); border-color: var(--amber); background: rgba(255, 176, 0, 0.1);">TARGETING COMPUTER</div>
             <div class="data-list" id="tgt-info">
-                <div style="text-align: center; color: #555; margin-top: 40px;">[ NO TARGET LOCKED ]<br>CLICK RADAR TO ACQUIRE</div>
+                <div style="text-align: center; color: #555; margin-top: 40px;">[ NO TARGETS LOCKED ]<br>SELECT TARGETS ON MATRIX</div>
             </div>
         </div>
 
         <div class="mfd">
             <div class="mfd-title" style="border-bottom: none;">ORDNANCE CONTROL</div>
             <div class="action-grid">
-                <button class="exec-btn" id="fire-btn" disabled>FIRE PARTICLE CANNON</button>
+                <button class="exec-btn" id="fire-btn" disabled>FIRE ALL WEAPONS</button>
                 <button class="exec-btn warp-btn" id="warp-btn">INITIALIZE BURN VECTOR</button>
             </div>
         </div>
@@ -169,6 +169,49 @@
 </div>
 
 <script>
+    // --- SYNTHETIC AUDIO ENGINE ---
+    let audioCtx = null;
+
+    function initAudio() {
+        if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+    }
+
+    function playSound(type) {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'lock') {
+            // High-pitched rapid double blip
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(880, now);
+            osc.frequency.setValueAtTime(1760, now + 0.05);
+            gain.gain.setValueAtTime(0.05, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+            osc.start(now); osc.stop(now + 0.15);
+        } else if (type === 'fire') {
+            // Descending laser sweep
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.2);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+        } else if (type === 'explosion') {
+            // Low-frequency rumble
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(100, now);
+            osc.frequency.exponentialRampToValueAtTime(10, now + 0.5);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 1.0);
+            osc.start(now); osc.stop(now + 1.0);
+        }
+    }
+
     // --- ENGINE CORE ---
     const canvas = document.getElementById('nav-canvas');
     const ctx = canvas.getContext('2d');
@@ -176,11 +219,9 @@
     function resizeCanvas() { canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight; }
     window.addEventListener('resize', resizeCanvas); resizeCanvas();
 
-    // 3D Math Constants
-    const R = 180; // Planet Radius
+    const R = 180;
     let angleX = 0.3, angleY = 0;
     
-    // State
     const nodes = [];
     let targets = [];
     const particles = [];
@@ -188,25 +229,21 @@
     
     let isWarping = false;
     let warpSpeed = 0;
-    let lockedTarget = null;
+    let lockedTargets = []; // Converted to Array for multi-lock
     let weaponPower = 80;
+    let mouseX = -100, mouseY = -100; // Start mouse offscreen
 
-    // Build Wireframe Sphere
+    // Wireframe Sphere
     for (let lat = -90; lat <= 90; lat += 15) {
         for (let lon = 0; lon < 360; lon += 15) {
             const latRad = lat * (Math.PI / 180);
             const lonRad = lon * (Math.PI / 180);
-            nodes.push({
-                x: R * Math.cos(latRad) * Math.cos(lonRad),
-                y: R * Math.sin(latRad),
-                z: R * Math.cos(latRad) * Math.sin(lonRad)
-            });
+            nodes.push({ x: R * Math.cos(latRad) * Math.cos(lonRad), y: R * Math.sin(latRad), z: R * Math.cos(latRad) * Math.sin(lonRad) });
         }
     }
 
-    // Generate Enemy Targets
     function spawnTargets() {
-        for(let i=0; i<4; i++) {
+        for(let i=0; i<5; i++) {
             targets.push({
                 id: 'TGT-' + Math.floor(Math.random()*8999 + 1000),
                 orbitAlt: R + 60 + Math.random() * 80,
@@ -219,13 +256,11 @@
     }
     spawnTargets();
 
-    // 3D to 2D Projection Function
     function project3D(x, y, z, cx, cy, cosX, sinX, cosY, sinY) {
         let x1 = x * cosY - z * sinY;
         let z1 = z * cosY + x * sinY;
         let y2 = y * cosX - z1 * sinX;
         let z2 = z1 * cosX + y * sinX;
-        
         const scale = 400 / (400 + z2);
         return { px: cx + x1 * scale, py: cy + y2 * scale, scale: scale, depth: z2 };
     }
@@ -235,17 +270,15 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const cx = canvas.width / 2; const cy = canvas.height / 2;
 
-        // Grid Background
         ctx.strokeStyle = 'rgba(0, 240, 255, 0.05)';
         ctx.beginPath(); ctx.arc(cx, cy, R + 80, 0, Math.PI * 2); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, canvas.height); ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy); ctx.stroke();
 
-        // Rotation Math
         angleY += isWarping ? 0.05 : 0.003;
         const cosX = Math.cos(angleX), sinX = Math.sin(angleX);
         const cosY = Math.cos(angleY), sinY = Math.sin(angleY);
 
-        // 1. Draw Planet Nodes
+        // 1. Planet
         ctx.fillStyle = isWarping ? '#fff' : '#00f0ff';
         nodes.forEach(n => {
             const p = project3D(n.x, n.y, n.z, cx, cy, cosX, sinX, cosY, sinY);
@@ -260,13 +293,11 @@
             }
         });
 
-        // 2. Update & Draw Targets
+        // 2. Targets
         targets.forEach(tgt => {
             if(!tgt.alive) return;
-            
             tgt.angle += tgt.speed;
             
-            // Cartesian coordinates of the target based on its orbit
             const tx = tgt.orbitAlt * Math.cos(tgt.angle);
             const ty = tgt.orbitAlt * Math.sin(tgt.angle) * tgt.inclination;
             const tz = tgt.orbitAlt * Math.sin(tgt.angle);
@@ -274,43 +305,37 @@
             const p = project3D(tx, ty, tz, cx, cy, cosX, sinX, cosY, sinY);
             tgt.screenX = p.px; tgt.screenY = p.py; tgt.depth = p.depth;
 
-            // Draw target if it's in front of the planet or on the edges
             if (p.depth < 0 || Math.hypot(tx, ty) > R) {
                 ctx.globalAlpha = 1.0;
-                
-                // Target Icon (Triangle)
                 ctx.strokeStyle = '#ff2a2a'; ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.moveTo(p.px, p.py - 6); ctx.lineTo(p.px + 6, p.py + 6); ctx.lineTo(p.px - 6, p.py + 6); ctx.closePath();
-                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(p.px, p.py - 6); ctx.lineTo(p.px + 6, p.py + 6); ctx.lineTo(p.px - 6, p.py + 6); ctx.closePath(); ctx.stroke();
+                ctx.fillStyle = '#ff2a2a'; ctx.font = "10px monospace"; ctx.fillText(tgt.id, p.px + 10, p.py);
 
-                // ID Label
-                ctx.fillStyle = '#ff2a2a'; ctx.font = "10px monospace";
-                ctx.fillText(tgt.id, p.px + 10, p.py);
-
-                // Lock-on Reticle
-                if (lockedTarget === tgt) {
+                // Multi-Lock Reticles
+                if (lockedTargets.includes(tgt)) {
                     ctx.strokeStyle = 'var(--amber)';
-                    const s = Math.sin(Date.now() / 200) * 4 + 14;
+                    const s = Math.sin(Date.now() / 200) * 4 + 18;
                     ctx.strokeRect(p.px - s/2, p.py - s/2, s, s);
                     
-                    // Draw vector from ship (bottom center)
-                    ctx.strokeStyle = 'rgba(255, 176, 0, 0.2)'; ctx.setLineDash([4, 4]);
-                    ctx.beginPath(); ctx.moveTo(cx, canvas.height); ctx.lineTo(p.px, p.py); ctx.stroke(); ctx.setLineDash([]);
+                    // Draw vector index number
+                    ctx.fillStyle = 'var(--amber)';
+                    ctx.fillText(`L-${lockedTargets.indexOf(tgt)+1}`, p.px - s/2, p.py - s/2 - 4);
                 }
             }
         });
 
-        // 3. Draw Beams
+        // 3. Beams
         beams.forEach((beam, index) => {
-            beam.progress += 0.08; // Beam speed
-            
+            beam.progress += 0.1;
             if (beam.progress >= 1) {
-                // Impact!
                 createExplosion(beam.target.screenX, beam.target.screenY);
+                playSound('explosion');
                 beam.target.alive = false;
-                if(lockedTarget === beam.target) clearLock();
                 beams.splice(index, 1);
+                
+                // Remove dead target from lock array
+                lockedTargets = lockedTargets.filter(t => t.alive);
+                updateTargetUI();
                 return;
             }
 
@@ -323,17 +348,34 @@
             ctx.shadowBlur = 0;
         });
 
-        // 4. Draw Particles (Explosions)
+        // 4. Particles
         ctx.globalAlpha = 1.0;
         particles.forEach((pt, index) => {
             pt.x += pt.vx; pt.y += pt.vy; pt.life -= 0.02;
             if (pt.life <= 0) { particles.splice(index, 1); return; }
-            
             ctx.fillStyle = `rgba(255, ${Math.floor(pt.life*255)}, 42, ${pt.life})`;
             ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.size * pt.life, 0, Math.PI*2); ctx.fill();
         });
 
-        // Dynamic Telemetry Update
+        // 5. Custom Crosshair
+        if (mouseX > 0 && mouseY > 0 && !isWarping) {
+            ctx.strokeStyle = 'rgba(0, 240, 255, 0.8)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            // Outer Ring
+            ctx.arc(mouseX, mouseY, 20, 0, Math.PI * 2);
+            // Center Dot
+            ctx.arc(mouseX, mouseY, 2, 0, Math.PI * 2);
+            ctx.stroke();
+            // Cardinal Lines
+            ctx.beginPath();
+            ctx.moveTo(mouseX - 30, mouseY); ctx.lineTo(mouseX - 10, mouseY);
+            ctx.moveTo(mouseX + 10, mouseY); ctx.lineTo(mouseX + 30, mouseY);
+            ctx.moveTo(mouseX, mouseY - 30); ctx.lineTo(mouseX, mouseY - 10);
+            ctx.moveTo(mouseX, mouseY + 10); ctx.lineTo(mouseX, mouseY + 30);
+            ctx.stroke();
+        }
+
         if (!isWarping && Math.random() > 0.8) {
             document.getElementById('alt').innerText = (408.0 + Math.random()).toFixed(1) + " km";
             document.getElementById('vel').innerText = (24530 + Math.random()*5).toFixed(0) + " km/h";
@@ -343,75 +385,103 @@
     }
 
     // --- INTERACTION LOGIC ---
-
-    // Raycast / Click to Lock
-    canvas.addEventListener('mousedown', (e) => {
+    canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left; const my = e.clientY - rect.top;
-        
-        let hit = null; let minDist = 20; // 20px hit radius
+        mouseX = e.clientX - rect.left; mouseY = e.clientY - rect.top;
+    });
+
+    canvas.addEventListener('mouseleave', () => { mouseX = -100; mouseY = -100; });
+
+    canvas.addEventListener('mousedown', (e) => {
+        initAudio(); // Required to unlock Web Audio context
+        let hit = null; let minDist = 25;
 
         targets.forEach(tgt => {
-            if(!tgt.alive || tgt.depth > 0) return; // Ignore dead or occluded targets
-            const dist = Math.hypot(tgt.screenX - mx, tgt.screenY - my);
+            if(!tgt.alive || tgt.depth > 0) return;
+            const dist = Math.hypot(tgt.screenX - mouseX, tgt.screenY - mouseY);
             if (dist < minDist) { minDist = dist; hit = tgt; }
         });
 
         if (hit) {
-            lockedTarget = hit;
-            document.getElementById('fire-btn').disabled = false;
-            updateTargetUI();
+            const index = lockedTargets.indexOf(hit);
+            if (index > -1) {
+                // Target already locked, click again to unlock
+                lockedTargets.splice(index, 1); 
+            } else {
+                // Lock new target (Max 4)
+                if (lockedTargets.length < 4) {
+                    lockedTargets.push(hit);
+                    playSound('lock');
+                }
+            }
         } else {
-            clearLock();
+            // Clicked empty space, clear all locks
+            lockedTargets = [];
         }
+        updateTargetUI();
     });
 
-    function clearLock() {
-        lockedTarget = null;
-        document.getElementById('fire-btn').disabled = true;
-        document.getElementById('tgt-info').innerHTML = '<div style="text-align: center; color: #555; margin-top: 40px;">[ NO TARGET LOCKED ]<br>CLICK RADAR TO ACQUIRE</div>';
-    }
-
     function updateTargetUI() {
-        if(!lockedTarget) return;
-        document.getElementById('tgt-info').innerHTML = `
-            <div class="data-row"><span>TRACKING ID</span><span class="val alert">${lockedTarget.id}</span></div>
-            <div class="data-row"><span>ORBITAL ALT</span><span class="val">${Math.floor(lockedTarget.orbitAlt * 12.5)} km</span></div>
-            <div class="data-row"><span>RELATIVE VEL</span><span class="val">${Math.floor(Math.abs(lockedTarget.speed) * 50000)} m/s</span></div>
-            <div class="data-row"><span>THREAT LVL</span><span class="val alert">MAXIMUM</span></div>
-            <div class="data-row" style="margin-top: 10px; color: var(--amber);">>> WEAPON TRACKING ALIGNED</div>
-        `;
+        const container = document.getElementById('tgt-info');
+        const fireBtn = document.getElementById('fire-btn');
+        
+        if(lockedTargets.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: #555; margin-top: 40px;">[ NO TARGETS LOCKED ]<br>SELECT TARGETS ON MATRIX</div>';
+            fireBtn.disabled = true;
+            return;
+        }
+
+        let html = '';
+        lockedTargets.forEach((tgt, i) => {
+            html += `<div class="data-row" style="color: var(--amber);">
+                        <span>TRK-${i+1} [${tgt.id}]</span>
+                        <span class="val alert">LOCKED</span>
+                     </div>`;
+        });
+
+        const reqPower = lockedTargets.length * 20;
+        const pwrColor = weaponPower >= reqPower ? 'var(--cyan)' : 'var(--crimson)';
+        html += `<div style="margin-top: 15px; color: ${pwrColor}; font-size: 12px; font-weight: bold;">
+                    PWR REQUIRED FOR VOLLEY: ${reqPower}%
+                 </div>`;
+        
+        container.innerHTML = html;
+        fireBtn.disabled = (weaponPower < reqPower);
     }
 
-    // Fire Weapon
     document.getElementById('fire-btn').addEventListener('click', () => {
-        if (lockedTarget && weaponPower >= 20) {
-            beams.push({ target: lockedTarget, progress: 0 });
-            // Deplete weapon capacitor slightly
-            weaponPower -= 20;
+        initAudio();
+        const cost = lockedTargets.length * 20;
+        
+        if (lockedTargets.length > 0 && weaponPower >= cost) {
+            playSound('fire');
+            
+            lockedTargets.forEach((tgt, index) => {
+                // Stagger beams slightly for visual effect
+                setTimeout(() => {
+                    beams.push({ target: tgt, progress: 0 });
+                }, index * 150);
+            });
+            
+            weaponPower -= cost;
             updatePowerVisuals('wep', weaponPower);
         }
     });
 
-    // Particle Generator
     function createExplosion(sx, sy) {
-        for(let i=0; i<30; i++) {
+        for(let i=0; i<40; i++) {
             particles.push({
                 x: sx, y: sy,
-                vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8,
+                vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10,
                 life: 1.0, size: Math.random() * 4 + 2
             });
         }
-        
-        // Spawn a new target to keep the game going
         setTimeout(spawnTargets, 2000);
     }
 
-    // Power Routing Sliders
     let activeSlider = null;
     function startDrag(sys, e) {
-        activeSlider = sys; document.addEventListener('mousemove', drag); document.addEventListener('mouseup', stopDrag);
-        drag(e); // Trigger initial click
+        activeSlider = sys; document.addEventListener('mousemove', drag); document.addEventListener('mouseup', stopDrag); drag(e);
     }
     function drag(e) {
         if(!activeSlider) return;
@@ -419,43 +489,34 @@
         const rect = bg.getBoundingClientRect();
         let percent = ((e.clientX - rect.left) / rect.width) * 100;
         percent = Math.max(5, Math.min(100, percent));
-        
-        if(activeSlider === 'wep') weaponPower = percent; // Store weapon state
-
+        if(activeSlider === 'wep') weaponPower = percent;
         updatePowerVisuals(activeSlider, percent);
     }
     function updatePowerVisuals(sys, percent) {
         document.getElementById(`bar-${sys}`).style.width = percent + '%';
         document.getElementById(`thumb-${sys}`).style.left = `calc(${percent}% - 3px)`;
         document.getElementById(`pwr-val-${sys}`).innerText = Math.floor(percent) + '%';
-        
-        // Disable firing if power is too low
-        if(sys === 'wep' && percent < 20 && lockedTarget) document.getElementById('fire-btn').disabled = true;
-        if(sys === 'wep' && percent >= 20 && lockedTarget) document.getElementById('fire-btn').disabled = false;
+        updateTargetUI(); // Check if power dropped below required firing threshold
     }
     function stopDrag() { activeSlider = null; document.removeEventListener('mousemove', drag); document.removeEventListener('mouseup', stopDrag); }
 
-    // Warp Button
     const wBtn = document.getElementById('warp-btn');
     wBtn.addEventListener('mousedown', () => {
         isWarping = true; wBtn.innerText = "VECTOR LOCKED\nBURNING..."; wBtn.style.color = "#000"; wBtn.style.background = "var(--amber)";
     });
     wBtn.addEventListener('mouseup', stopWarp);
     wBtn.addEventListener('mouseleave', stopWarp);
-    
     function stopWarp() {
         isWarping = false; warpSpeed = 0;
         wBtn.innerText = "INITIALIZE BURN VECTOR"; wBtn.style.color = "var(--amber)"; wBtn.style.background = "rgba(255, 176, 0, 0.1)";
         document.getElementById('vel').style.color = "#fff";
     }
 
-    // Clock
     setInterval(() => {
         const d = new Date();
         document.getElementById('sys-clock').innerText = d.toISOString().split('T')[1].split('.')[0] + " UTC";
     }, 1000);
 
-    // Start
     animate();
 </script>
 </body>

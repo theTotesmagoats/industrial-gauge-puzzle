@@ -4,31 +4,71 @@
     <meta charset="UTF-8">
     <title>Terminal Mk IV - Operation Vanguard</title>
     <style>
+        /* Environmental Lighting / Bunker Wall */
         body {
-            background-color: #050505;
-            color: #33FF00;
-            font-family: 'Courier New', Courier, monospace;
-            margin: 0;
-            padding: 20px;
-            overflow: hidden;
+            background-color: #121312;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             height: 100vh;
+            margin: 0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        /* Physical Chassis Construction */
+        #chassis {
+            background-color: #2a2c29; /* Oxidized Olive Drab */
+            padding: 50px 60px 70px 60px;
+            border-radius: 12px;
+            box-shadow: 
+                inset 0 0 20px #0a0a0a,
+                15px 15px 40px rgba(0,0,0,0.9),
+                -1px -1px 3px rgba(255,255,255,0.05);
+            border: 4px solid #151515;
+            position: relative;
+        }
+
+        /* Rivets/Screws */
+        .rivet {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #1a1a1a;
+            border-radius: 50%;
+            box-shadow: inset 1px 1px 2px #444, inset -1px -1px 2px #000;
+        }
+        .r-tl { top: 15px; left: 15px; }
+        .r-tr { top: 15px; right: 15px; }
+        .r-bl { bottom: 15px; left: 15px; }
+        .r-br { bottom: 15px; right: 15px; }
+
+        /* CRT Screen */
+        #screen {
+            background-color: #030803;
+            width: 700px;
+            height: 500px;
+            border-radius: 15px 15px 25px 25px;
+            padding: 20px;
+            box-sizing: border-box;
+            box-shadow: inset 0 0 40px #000;
+            border: 8px solid #111;
+            position: relative;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
-            text-shadow: 0 0 5px #33FF00;
+            color: #33FF00;
+            text-shadow: 0 0 6px #33FF00;
         }
-        
-        /* CRT Scanline Effect */
-        body::after {
+
+        /* Scanline Overlay */
+        #screen::after {
             content: " ";
             display: block;
             position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
             z-index: 2;
-            background-size: 100% 2px, 3px 100%;
+            background-size: 100% 3px;
             pointer-events: none;
         }
 
@@ -38,12 +78,14 @@
             white-space: pre-wrap;
             margin-bottom: 10px;
             padding-right: 10px;
+            z-index: 3;
         }
 
         #input-line {
             display: flex;
             align-items: center;
             font-weight: bold;
+            z-index: 3;
         }
 
         #prompt { margin-right: 10px; }
@@ -57,16 +99,44 @@
             flex-grow: 1;
             outline: none;
             text-transform: uppercase;
-            text-shadow: 0 0 5px #33FF00;
+            text-shadow: 0 0 6px #33FF00;
+        }
+
+        /* Cipher Hover Mechanic */
+        .cipher-hint {
+            cursor: help;
+            border-bottom: 1px dotted #33FF00;
+            position: relative;
+        }
+        .cipher-hint:hover::after {
+            content: "DECRYPTION LOGIC [SHIFT -3]:\nW -> T\nD -> A\nU -> R\nJ -> G\nH -> E\nW -> T\n----------------\nRESULT: TARGET";
+            position: absolute;
+            bottom: 120%;
+            left: 0;
+            background: #051105;
+            border: 1px solid #33FF00;
+            padding: 10px;
+            white-space: pre;
+            z-index: 10;
+            box-shadow: 0 0 10px #000;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-<div id="output"></div>
-<div id="input-line">
-    <span id="prompt">C:\></span>
-    <input type="text" id="cmd" autocomplete="off" autofocus>
+<div id="chassis">
+    <div class="rivet r-tl"></div>
+    <div class="rivet r-tr"></div>
+    <div class="rivet r-bl"></div>
+    <div class="rivet r-br"></div>
+    <div id="screen">
+        <div id="output"></div>
+        <div id="input-line">
+            <span id="prompt">SYS_INIT></span>
+            <input type="text" id="cmd" autocomplete="off" autofocus>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -74,21 +144,63 @@
     const inputField = document.getElementById('cmd');
     const promptSpan = document.getElementById('prompt');
 
-    // Engine State
-    let state = 'BOOT';
+    // Engine Variables
+    let state = 'DIFFICULTY_SELECT';
     let isTyping = false;
+    let easyMode = false;
     
-    // Consequence Variables (Second Order Effects)
+    // Tactical Variables
     let alertLevel = 0;
     let signalBoosted = false;
     let triangulationRisk = 0;
 
-    const printText = (text, speed = 20, callback = null) => {
+    // Procedural Audio Engine
+    let audioCtx;
+    const initAudio = () => {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    };
+
+    const playClick = () => {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(300, audioCtx.currentTime); // Low mechanical thud
+        osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.02); 
+        
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.02);
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.03);
+    };
+
+    // Keystroke listener for typing sound
+    inputField.addEventListener('input', playClick);
+
+    const printText = (text, speed = 25, callback = null) => {
         isTyping = true;
         inputField.disabled = true;
         let i = 0;
+        
+        // Handle HTML injection for hints
+        if (text.includes('<span')) {
+            outputDiv.innerHTML += text + '<br>';
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+            isTyping = false;
+            inputField.disabled = false;
+            inputField.focus();
+            if (callback) callback();
+            return;
+        }
+
         const interval = setInterval(() => {
             outputDiv.innerHTML += text.charAt(i);
+            if (text.charAt(i) !== ' ' && text.charAt(i) !== '\n') playClick();
             outputDiv.scrollTop = outputDiv.scrollHeight;
             i++;
             if (i >= text.length) {
@@ -104,11 +216,15 @@
 
     const handleInput = (rawCmd) => {
         if (isTyping) return;
+        initAudio(); // Guarantee audio context is active
         const cmd = rawCmd.trim().toUpperCase();
         outputDiv.innerHTML += `<br><span style="color:#FFF">> ${cmd}</span><br>`;
         inputField.value = '';
 
         switch (state) {
+            case 'DIFFICULTY_SELECT':
+                processDifficulty(cmd);
+                break;
             case 'BOOT':
                 processBoot(cmd);
                 break;
@@ -121,22 +237,34 @@
         }
     };
 
+    const processDifficulty = (cmd) => {
+        if (cmd === '1' || cmd === '2') {
+            easyMode = (cmd === '2');
+            state = 'BOOT';
+            promptSpan.innerText = "C:\\>";
+            printText("CONFIGURING HARDWARE...\nWARNING: PREVIOUS OPERATOR'S REMAINS HAVE BEEN CLEARED FROM THE CONSOLE.\nCONNECTION LOCKED. TYPE 'HELP' TO DIAGNOSE.", 20);
+        } else {
+            printText("INVALID SELECTION. ENTER 1 OR 2.");
+        }
+    };
+
     const processBoot = (cmd) => {
         if (cmd === 'HELP') {
-            printText("SYSTEM FAULT: PREVIOUS OPERATOR EXPUNGED (KIA). OVERRIDE REQUIRED.\nAUTHORIZATION CIPHER IN USE: SHIFT -3.\nENCRYPTED KEY: 'WDUJHW'\nENTER DECRYPTED KEY:");
+            let cipherString = easyMode ? '<span class="cipher-hint">WDUJHW</span>' : 'WDUJHW';
+            printText(`SYSTEM FAULT: ALLIED OVERRIDE REQUIRED.\nAUTHORIZATION CIPHER IN USE: CAESAR SHIFT -3.\nINTERCEPTED KEY: ${cipherString}\nENTER DECRYPTED KEY:`, 20);
             return;
         }
         
         if (cmd === 'TARGET') {
-            printText("AUTHORIZATION ACCEPTED. WELCOME TO TERMINAL MK IV.\nDO NOT SPILL COFFEE ON THE CONSOLE. PENALTY IS TREASON.\nTYPE 'HELP' FOR COMMAND OPERATIONS.", 20, () => {
+            printText("AUTHORIZATION ACCEPTED. WELCOME TO TERMINAL MK IV.\nDO NOT SPILL COFFEE ON THE CONSOLE. PENALTY IS TREASON.\nTYPE 'HELP' FOR TACTICAL OPERATIONS.", 20, () => {
                 state = 'CONNECTED';
                 promptSpan.innerText = "HQ_LINK>";
             });
         } else {
             alertLevel++;
-            printText(`INVALID KEY. THE GESTAPO HAS BEEN NOTIFIED OF YOUR INCOMPETENCE.\nALERT LEVEL: ${alertLevel}/3. TYPE 'HELP' IF YOU LACK BASIC TRAINING.`);
+            printText(`INVALID KEY. THE LUFTWAFFE HAS BEEN NOTIFIED OF YOUR INCOMPETENCE.\nALERT LEVEL: ${alertLevel}/3. TYPE 'HELP'.`);
             if (alertLevel >= 3) {
-                printText("\n*** CRITICAL ALERT: BUNKER DOORS BREACHED. TERMINAL PURGING. YOU HAVE FAILED. ***", 50, () => {
+                printText("\n*** CRITICAL ALERT: BUNKER DOORS BREACHED. TERMINAL PURGING. YOU HAVE FAILED. ***", 40, () => {
                     inputField.style.display = 'none';
                 });
             }
@@ -145,7 +273,7 @@
 
     const processCommand = (cmd) => {
         if (cmd === 'HELP') {
-            printText("AVAILABLE COMMANDS:\n- STATUS     : CHECK SYSTEM AND ALERT LEVELS\n- BOOST_SIG  : AMPLIFY RADIO TO COMMAND (WARNING: INCREASES DETECTION RISK)\n- REQ_EXTRACT: REQUEST EXTRACTION COORDINATES FROM HQ");
+            printText("AVAILABLE COMMANDS:\n- STATUS     : CHECK SYSTEM AND TRIANGULATION RISKS\n- BOOST_SIG  : AMPLIFY RADIO (WARNING: INCREASES DETECTION RISK)\n- REQ_EXTRACT: REQUEST EXTRACTION COORDINATES");
         } else if (cmd === 'STATUS') {
             printText(`SYSTEM: NOMINAL.\nOPERATOR STATUS: ALIVE (TEMPORARILY).\nTRIANGULATION RISK: ${triangulationRisk}%`);
         } else if (cmd === 'BOOST_SIG') {
@@ -154,18 +282,18 @@
             } else {
                 signalBoosted = true;
                 triangulationRisk += 40;
-                printText("WARNING: SIGNAL BOOSTED. TRANSMISSION CLARITY SECURED.\nCONSEQUENCE: GERMAN RDF STATIONS ARE LOCKING ONTO THIS SECTOR.");
+                printText("WARNING: SIGNAL BOOSTED. CLARITY SECURED.\nCONSEQUENCE: GERMAN RDF STATIONS ARE LOCKING ONTO THIS SECTOR. YOUR EXTRACTION WINDOW IS SHRINKING.");
             }
         } else if (cmd === 'REQ_EXTRACT') {
             if (!signalBoosted) {
                 printText("TRANSMISSION FAILED. STATIC INTERFERENCE TOO HIGH. HQ CANNOT HEAR YOU. CONSIDER YOUR SIGNAL STRENGTH.");
             } else {
                 state = 'CALC_EXTRACT';
-                let timeWindow = 45 - (triangulationRisk * 0.25); // Math consequence
+                let timeWindow = 45 - (triangulationRisk * 0.25); 
                 printText(`HQ CONNECTED.\n"Listen up. Patrols are moving in. We are holding a C-47 transport at Sector Grid 70-X."\n"You are currently at Sector Grid 40-X. The distance is exactly 30 kilometers."\n"You must travel at a sprint pace of 10 kilometers per hour."\n"Due to your signal noise, we can only keep the plane waiting for ${timeWindow} hours."\n\nCALCULATE: How many hours will it take you to reach the transport?\nENTER HOURS:`);
             }
         } else {
-            printText("COMMAND UNRECOGNIZED. STOP TYPING GIBBERISH AND WIN THE WAR.");
+            printText("COMMAND UNRECOGNIZED. STOP TYPING GIBBERISH AND FOCUS.");
         }
     };
 
@@ -174,19 +302,21 @@
         if (answer === 3) {
             let timeWindow = 45 - (triangulationRisk * 0.25);
             if (3 <= timeWindow) {
-                printText("COORDINATES LOCKED. THE MATH CHECKS OUT.\nGRAB YOUR GEAR. WE WILL SEE YOU IN LONDON.\n\n*** MISSION SUCCESS ***");
-                inputField.style.display = 'none';
+                printText("COORDINATES LOCKED. THE MATH CHECKS OUT.\nGRAB YOUR GEAR. WE WILL SEE YOU IN LONDON.\n\n*** MISSION SUCCESS ***", 30, () => {
+                    inputField.style.display = 'none';
+                });
             } else {
-                printText("THE MATH IS CORRECT, BUT YOU TOOK TOO LONG. THE PLANE LEFT.\nYOUR DECISION TO BOOST THE SIGNAL BROUGHT THE PATROLS TOO FAST.\n\n*** MISSION FAILED ***");
-                inputField.style.display = 'none';
+                printText("THE MATH IS CORRECT, BUT YOU TOOK TOO LONG. THE PLANE LEFT.\nYOUR DECISION TO BOOST THE SIGNAL BROUGHT THE PATROLS TOO FAST.\n\n*** MISSION FAILED ***", 40, () => {
+                    inputField.style.display = 'none';
+                });
             }
         } else {
             printText("INCORRECT CALCULATION. IF YOU CAN'T DO MATH, YOU CAN'T BE RESCUED. TRY AGAIN:");
         }
     };
 
-    // Init
-    printText("BOOT SEQUENCE INITIATED...\nESTABLISHING SECURE CONNECTION...\nERROR: CONNECTION LOCKED. TYPE 'HELP' TO DIAGNOSE.", 30);
+    // Init Sequence
+    printText("TERMINAL POWERED ON.\nSELECT OPERATOR PROTOCOL:\n[1] NORMAL OP (STANDARD ENCRYPTION)\n[2] TRAINING OP (ASSISTED DECRYPTION)\nENTER SELECTION:");
 
     inputField.addEventListener('keypress', function (e) {
         if (e.key === 'Enter') {

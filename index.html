@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATLAS: PRESIDENTIAL TERMINAL v15.2</title>
+    <title>ATLAS: PRESIDENTIAL TERMINAL v15.3</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
         
@@ -41,6 +41,7 @@
             position: relative; overflow: hidden; display: flex; flex-direction: column;
             box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
             opacity: 0; transition: opacity 0.1s, background-color 0.5s;
+            cursor: text;
         }
         .crt-screen.on { opacity: 1; }
         .crt-screen.war-mode { background: #1a0500; } 
@@ -83,7 +84,7 @@
 
         .terminal-area {
             display: flex; flex-direction: column; padding: 20px 30px 10px 30px; 
-            height: 100%; border-right: 2px solid var(--dim); cursor: text; overflow: hidden;
+            height: 100%; border-right: 2px solid var(--dim); overflow: hidden;
         }
 
         #artilleryCanvas {
@@ -119,18 +120,21 @@
         .block.user-echo { font-weight: bold; opacity: 0.9; }
         .block.whip { color: var(--legislature); text-shadow: 0 0 2px var(--legislature); border-left: 3px solid var(--legislature); padding-left: 15px; font-weight: bold; }
 
+        /* UNIFIED INPUT STYLING */
         .input-line {
             display: flex; align-items: center; margin-top: auto;
             flex-shrink: 0; display: none; padding-bottom: 8px; font-size: 24px;
         }
         .prompt { margin-right: 10px; font-weight: bold; text-shadow: none; }
-        #visualInput { white-space: pre; text-transform: lowercase; text-shadow: none; }
+        
+        .visual-input { white-space: pre; text-transform: lowercase; text-shadow: none; }
+        .hidden-input { position: absolute; opacity: 0; left: -9999px; top: -9999px; pointer-events: none; }
+        
         .cursor {
             display: inline-block; width: 14px; height: 24px; background: var(--phosphor); 
             animation: blink 1s step-end infinite; margin-left: 2px; vertical-align: text-bottom; box-shadow: 0 0 2px var(--phosphor);
         }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-        #cmd { position: absolute; opacity: 0; left: -9999px; top: -9999px; pointer-events: none; }
 
         .dashboard-area {
             padding: 20px; display: flex; flex-direction: column; gap: 12px; 
@@ -239,7 +243,7 @@
 <body>
 
     <div class="hardware-bezel">
-        <div class="crt-screen" id="screen">
+        <div class="crt-screen" id="screen" onclick="focusTerminal()">
             <div class="scanlines"></div><div class="glow"></div>
             
             <div id="donorOverlay" class="donor-overlay" style="display:none;">
@@ -258,8 +262,8 @@
                 <h2 style="color:var(--phosphor); margin-top:30px;">DAY ONE PROTOCOL</h2>
                 <div class="input-line" id="briefingInputLine">
                     <span class="prompt" id="briefingPrompt">EO:~$</span>
-                    <span id="briefingVisualInput"></span><div class="cursor" id="briefingCursor"></div>
-                    <input type="text" id="briefingCmd" autocomplete="off" spellcheck="false" maxlength="100">
+                    <span id="briefingVisualInput" class="visual-input"></span><div class="cursor" id="briefingCursor"></div>
+                    <input type="text" id="briefingCmd" class="hidden-input" autocomplete="off" spellcheck="false" maxlength="100">
                 </div>
             </div>
 
@@ -285,8 +289,8 @@
                 
                 <div class="input-line" id="whipInputLine">
                     <span class="prompt">WHIP:~$</span>
-                    <span id="whipVisualInput"></span><div class="cursor"></div>
-                    <input type="text" id="whipCmd" autocomplete="off" spellcheck="false" maxlength="60">
+                    <span id="whipVisualInput" class="visual-input"></span><div class="cursor"></div>
+                    <input type="text" id="whipCmd" class="hidden-input" autocomplete="off" spellcheck="false" maxlength="60">
                 </div>
             </div>
 
@@ -305,8 +309,8 @@
                 
                 <div class="input-line" style="margin-top:20px;" id="sigintInputLine">
                     <span class="prompt">DEC:~$</span>
-                    <span id="sigintVisualInput"></span><div class="cursor"></div>
-                    <input type="text" id="sigintCmd" autocomplete="off" spellcheck="false" maxlength="60">
+                    <span id="sigintVisualInput" class="visual-input"></span><div class="cursor"></div>
+                    <input type="text" id="sigintCmd" class="hidden-input" autocomplete="off" spellcheck="false" maxlength="60">
                 </div>
                 
                 <p id="sigintStatus" style="margin-top:30px;">Success: Decryption Complete | Failure: Garbage Intel</p>
@@ -320,13 +324,13 @@
             </div>
 
             <div class="system-grid">
-                <div class="terminal-area" onclick="focusTerminal()">
+                <div class="terminal-area">
                     <canvas id="artilleryCanvas"></canvas>
                     <div class="log-output" id="logOutput"></div>
                     <div class="input-line" id="inputLine">
                         <span class="prompt" id="promptText">POTUS:~$</span>
-                        <span id="visualInput"></span><div class="cursor" id="cursorIndicator"></div>
-                        <input type="text" id="cmd" autocomplete="off" spellcheck="false" maxlength="60">
+                        <span id="visualInput" class="visual-input"></span><div class="cursor" id="cursorIndicator"></div>
+                        <input type="text" id="cmd" class="hidden-input" autocomplete="off" spellcheck="false" maxlength="60">
                     </div>
                 </div>
 
@@ -572,7 +576,7 @@
 
         function playClick() {
             if (!audioCtx || !state.soundEnabled) return;
-            if (!clickBuffer) return; // Hard fail-safe for rapid uninitialized keystrokes
+            if (!clickBuffer) return; 
             const source = audioCtx.createBufferSource(); source.buffer = clickBuffer;
             const filter = audioCtx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.value = 4000;
             const gain = audioCtx.createGain(); gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.015);
@@ -647,8 +651,22 @@
             else { DOM.sLed.classList.remove('on'); stopHum(); }
         }
 
-        // --- FOCUS FUNCTIONS ---
-        function focusTerminal() { if (state.isOn && !DOM.cmd.disabled) DOM.cmd.focus(); }
+        // --- FOCUS MANAGEMENT ---
+        function focusTerminal() { 
+            if (!state.isOn) return;
+            
+            if (DOM.briefingMode.style.display !== 'none') {
+                if (!DOM.briefingCmd.disabled) DOM.briefingCmd.focus();
+            } else if (DOM.whipMode.style.display !== 'none') {
+                if (!DOM.whipCmd.disabled) DOM.whipCmd.focus();
+            } else if (DOM.sigintMode.style.display !== 'none') {
+                if (!DOM.sigintCmd.disabled) DOM.sigintCmd.focus();
+            } else if (DOM.donorOverlay.style.display !== 'none') {
+                return; // Let buttons maintain focus
+            } else {
+                if (!DOM.cmd.disabled) DOM.cmd.focus();
+            }
+        }
         
         function enableBriefingInput() {
             DOM.briefingCmd.disabled = false;
@@ -1271,7 +1289,6 @@
         }
 
         function processExecutiveOrder(rawVal) {
-            // Scenario Intercept
             if (rawVal.startsWith('load ')) {
                 const scenarioId = rawVal.split(' ')[1];
                 if (historicalScenarios[scenarioId]) {
@@ -1846,7 +1863,6 @@
         
         DOM.cmd.addEventListener('input', (e) => { DOM.visInput.textContent = e.target.value.toLowerCase(); });
         DOM.cmd.addEventListener('keydown', (e) => { if (e.key === 'Backspace' || e.key.length === 1) playClick(); if (e.key === 'Enter') processInput(); });
-        DOM.cmd.addEventListener('blur', () => { if (state.isOn && !DOM.cmd.disabled) setTimeout(() => DOM.cmd.focus(), 10); });
 
         DOM.briefingCmd.addEventListener('input', (e) => { DOM.briefingVisualInput.textContent = e.target.value.toLowerCase(); });
         DOM.briefingCmd.addEventListener('keydown', (e) => { 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATLAS: PRESIDENTIAL TERMINAL v15.3</title>
+    <title>ATLAS: PRESIDENTIAL TERMINAL v15.4</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
         
@@ -249,9 +249,11 @@
             <div id="donorOverlay" class="donor-overlay" style="display:none;">
                 <div class="donor-header">HIGH PRIORITY INTERCEPT</div>
                 <div id="donorContent" style="text-align: center; max-width: 600px; margin: 20px;"></div>
-                <div id="donorOptions" style="display: flex; gap: 20px; margin-top: 30px;">
-                    <button class="hw-btn" id="acceptDonorBtn">ACCEPT</button>
-                    <button class="hw-btn" id="rejectDonorBtn">REJECT</button>
+                
+                <div class="input-line" style="margin-top:20px; display:flex;" id="donorInputLine">
+                    <span class="prompt" style="color:var(--dark)">DONOR:~$</span>
+                    <span id="donorVisualInput" class="visual-input"></span><div class="cursor" style="background:var(--dark); box-shadow:0 0 2px var(--dark);"></div>
+                    <input type="text" id="donorCmd" class="hidden-input" autocomplete="off" spellcheck="false" maxlength="60">
                 </div>
             </div>
 
@@ -259,9 +261,9 @@
                 <h1>PREDECESSOR'S REPORT</h1>
                 <p id="predecessorSummary">Loading historical failures...</p>
                 <hr>
-                <h2 style="color:var(--phosphor); margin-top:30px;">DAY ONE PROTOCOL</h2>
-                <div class="input-line" id="briefingInputLine">
-                    <span class="prompt" id="briefingPrompt">EO:~$</span>
+                <h2 style="color:var(--phosphor); margin-top:30px;">ENVIRONMENT SELECTION</h2>
+                <div class="input-line" id="briefingInputLine" style="margin-top:30px;">
+                    <span class="prompt" id="briefingPrompt">POTUS:~$</span>
                     <span id="briefingVisualInput" class="visual-input"></span><div class="cursor" id="briefingCursor"></div>
                     <input type="text" id="briefingCmd" class="hidden-input" autocomplete="off" spellcheck="false" maxlength="100">
                 </div>
@@ -287,7 +289,7 @@
                     </div>
                 </div>
                 
-                <div class="input-line" id="whipInputLine">
+                <div class="input-line" id="whipInputLine" style="margin-top:20px;">
                     <span class="prompt">WHIP:~$</span>
                     <span id="whipVisualInput" class="visual-input"></span><div class="cursor"></div>
                     <input type="text" id="whipCmd" class="hidden-input" autocomplete="off" spellcheck="false" maxlength="60">
@@ -421,8 +423,9 @@
             
             donorOverlay: document.getElementById('donorOverlay'),
             donorContent: document.getElementById('donorContent'),
-            acceptDonorBtn: document.getElementById('acceptDonorBtn'),
-            rejectDonorBtn: document.getElementById('rejectDonorBtn')
+            donorInputLine: document.getElementById('donorInputLine'),
+            donorCmd: document.getElementById('donorCmd'),
+            donorVisualInput: document.getElementById('donorVisualInput')
         };
 
         // --- DICTIONARIES & SCENARIOS ---
@@ -662,7 +665,7 @@
             } else if (DOM.sigintMode.style.display !== 'none') {
                 if (!DOM.sigintCmd.disabled) DOM.sigintCmd.focus();
             } else if (DOM.donorOverlay.style.display !== 'none') {
-                return; // Let buttons maintain focus
+                if (!DOM.donorCmd.disabled) DOM.donorCmd.focus();
             } else {
                 if (!DOM.cmd.disabled) DOM.cmd.focus();
             }
@@ -673,15 +676,22 @@
             DOM.briefingCmd.value = '';
             
             DOM.predecessorSummary.innerHTML = `
-                Standard Sandbox: Type EO directives.<br><br>
+                Standard Sandbox: Type [play]<br><br>
                 <span style="color:var(--dark)">--- OR LOAD HISTORICAL ENVIRONMENT ---</span><br>
-                [load 1929] - The Great Depression<br>
-                [load 1980] - The Stagflation Crisis
+                [1929] - The Great Depression<br>
+                [1980] - The Stagflation Crisis
             `;
 
             DOM.briefingVisualInput.textContent = '';
             DOM.briefingInputLine.style.display = 'flex';
             DOM.briefingCmd.focus();
+        }
+
+        function enableDonorInput() {
+            DOM.donorCmd.disabled = false;
+            DOM.donorCmd.value = '';
+            DOM.donorVisualInput.textContent = '';
+            DOM.donorCmd.focus();
         }
 
         function enableWhipInput() {
@@ -702,6 +712,16 @@
 
         function enableInput() { DOM.inputLine.style.display = 'flex'; DOM.cmd.disabled = false; focusTerminal(); }
         
+        function disableInput() {
+            DOM.cmd.disabled = true;
+            DOM.whipCmd.disabled = true;
+            DOM.briefingCmd.disabled = true;
+            DOM.sigintCmd.disabled = true;
+            if(DOM.donorCmd) DOM.donorCmd.disabled = true;
+            DOM.sigintMode.style.display = 'none';
+            DOM.donorOverlay.style.display = 'none';
+        }
+
         function print(text, type = 'system') { 
             const div = document.createElement('div'); 
             div.className = `block ${type}`; 
@@ -891,7 +911,6 @@
             playDonorCall();
             
             DOM.donorContent.innerHTML = `
-                <h2 style="color:var(--dark); margin-bottom:15px;">${deal.donor} INTERCEPT</h2>
                 <p style="font-size:20px; line-height:1.4;">
                     "Mr. President, we've reviewed your policy package. If you pass [${deal.dealName}] now, 
                     I can promise a $50M SuperPAC boost instantly. Approval +10%."
@@ -901,10 +920,12 @@
                     <li>Policy Action Required: ${deal.dealName}</li>
                     <li>Incentive: +10 Approval, $50M SuperPAC Boost</li>
                 </ul>
+                <p style="color:var(--dim); margin-top: 20px; font-weight:bold;">Type [accept] or [reject]</p>
             `;
             
             DOM.donorOverlay.style.display = 'flex';
             disableInput();
+            enableDonorInput();
         }
 
         function processDonorDecision(decision) {
@@ -934,9 +955,6 @@
             updateDashboard();
             enableInput();
         }
-
-        DOM.acceptDonorBtn.addEventListener('click', () => { processDonorDecision('accept'); });
-        DOM.rejectDonorBtn.addEventListener('click', () => { processDonorDecision('reject'); });
 
         function triggerRandomDonorEvent() {
             if (state.donorIntercept.active || state.pendingEvent || state.activeScenario) return;
@@ -1260,15 +1278,6 @@
             }
         }
 
-        function disableInput() {
-            DOM.cmd.disabled = true;
-            DOM.whipCmd.disabled = true;
-            DOM.briefingCmd.disabled = true;
-            DOM.sigintCmd.disabled = true;
-            DOM.sigintMode.style.display = 'none';
-            DOM.donorOverlay.style.display = 'none';
-        }
-
         function togglePower() {
             if (state.isOn) {
                 state.isOn = false; DOM.pLed.classList.remove('on'); DOM.screen.className = 'crt-screen'; 
@@ -1288,55 +1297,22 @@
             }, 800);
         }
 
-        function processExecutiveOrder(rawVal) {
-            if (rawVal.startsWith('load ')) {
-                const scenarioId = rawVal.split(' ')[1];
-                if (historicalScenarios[scenarioId]) {
-                    loadHistoricalScenario(scenarioId);
-                    return;
-                } else {
-                    print(`SYSTEM: Scenario hash '${scenarioId}' not found.`, 'danger');
-                    enableBriefingInput();
-                    return;
-                }
+        function processBootCommand(rawVal) {
+            if (rawVal === '1929' || rawVal === '1980') {
+                loadHistoricalScenario(rawVal);
+                return;
             }
-
-            const val = rawVal.replace(/ and /g, ',').split(',').map(t => t.trim()).filter(t => t.length > 0 && !/^[,\s]*$/.test(t));
-            
-            if (val.length > 5) {
-                print("SYSTEM: Executive Order package exceeds 5 directives. Aborting.", 'danger');
-                enableBriefingInput();
+            if (rawVal === 'play') {
+                DOM.briefingMode.style.display = 'none';
+                DOM.dash.style.visibility = 'visible'; 
+                processTicker(); updateDashboard();
+                print("SYSTEM: INITIALIZING STANDARD SANDBOX ENVIRONMENT.", 'user-echo');
+                setTimeout(() => { runTurn(); }, 500);
                 return;
             }
             
-            let commands = [];
-            for (let token of val) {
-                if (token in macroCommands || ['rr','cr','is','cs','tx','dr','ta','ft','pc','qe','dn'].includes(token)) {
-                    commands.push(token);
-                } else {
-                    print(`SYSTEM: Unrecognized directive "${token}" in EO package.`, 'danger');
-                    enableBriefingInput();
-                    return;
-                }
-            }
-            
-            state.hasUsedExecutiveOrder = true;
-            DOM.briefingMode.style.display = 'none';
-            DOM.dash.style.visibility = 'visible'; 
-            processTicker(); updateDashboard();
-            
-            print("EXECUTIVE ORDER AUTHORIZED: " + commands.join(", "), 'user-echo');
-            
-            const omnibusPolicies = ['ms', 'is', 'tx'];
-            if (commands.some(cmd => omnibusPolicies.includes(cmd))) {
-                setTimeout(() => {
-                    triggerRandomWhipEvent(commands.find(cmd => omnibusPolicies.includes(cmd)));
-                }, 1000);
-            }
-            
-            for (let key of commands) macroCommands[key].effect();
-            
-            setTimeout(() => { runTurn(); }, 500);
+            print("SYSTEM: Unrecognized boot directive. Type 'play', '1929', or '1980'.", 'danger');
+            enableBriefingInput();
         }
 
         function loadHistoricalScenario(id) {
@@ -1867,7 +1843,21 @@
         DOM.briefingCmd.addEventListener('input', (e) => { DOM.briefingVisualInput.textContent = e.target.value.toLowerCase(); });
         DOM.briefingCmd.addEventListener('keydown', (e) => { 
             if (e.key === 'Backspace' || e.key.length === 1) playClick(); 
-            if (e.key === 'Enter') processExecutiveOrder(DOM.briefingCmd.value.trim().toLowerCase()); 
+            if (e.key === 'Enter') processBootCommand(DOM.briefingCmd.value.trim().toLowerCase()); 
+        });
+
+        DOM.donorCmd.addEventListener('input', (e) => { DOM.donorVisualInput.textContent = e.target.value.toLowerCase(); });
+        DOM.donorCmd.addEventListener('keydown', (e) => { 
+            if (e.key === 'Backspace' || e.key.length === 1) playClick(); 
+            if (e.key === 'Enter') {
+                const val = DOM.donorCmd.value.trim().toLowerCase();
+                if (val === 'accept' || val === 'reject') {
+                    processDonorDecision(val);
+                } else {
+                    DOM.donorCmd.value = '';
+                    DOM.donorVisualInput.textContent = '';
+                }
+            }
         });
 
         DOM.whipCmd.addEventListener('input', (e) => { DOM.whipVisualInput.textContent = e.target.value.toLowerCase(); });

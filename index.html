@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATLAS: PRESIDENTIAL TERMINAL v15.4</title>
+    <title>ATLAS: PRESIDENTIAL TERMINAL v15.6</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
         
@@ -87,28 +87,17 @@
             height: 100%; border-right: 2px solid var(--dim); overflow: hidden;
         }
 
-        #artilleryCanvas {
-            width: 100%; height: 250px; flex-shrink: 0;
-            background: rgba(255, 68, 68, 0.05);
-            border: 1px solid var(--war); border-radius: 4px;
-            margin-bottom: 15px; display: none;
-            box-shadow: inset 0 0 15px rgba(255, 68, 68, 0.2);
+        #artilleryCanvas, #sigintCanvas {
+            width: 100%; flex-shrink: 0; border-radius: 4px; margin-bottom: 15px; display: none;
         }
-
-        #sigintCanvas {
-            width: 100%; height: 300px; flex-shrink: 0;
-            background: rgba(0, 170, 255, 0.05);
-            border: 1px solid var(--legislature); border-radius: 4px;
-            margin-bottom: 15px; display: none;
-            box-shadow: inset 0 0 15px rgba(0, 170, 255, 0.2);
-        }
+        #artilleryCanvas { height: 250px; background: rgba(255, 68, 68, 0.05); border: 1px solid var(--war); box-shadow: inset 0 0 15px rgba(255, 68, 68, 0.2); }
+        #sigintCanvas { height: 300px; background: rgba(0, 170, 255, 0.05); border: 1px solid var(--legislature); box-shadow: inset 0 0 15px rgba(0, 170, 255, 0.2); }
 
         .log-output {
             flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column;
-            justify-content: flex-start; padding-bottom: 15px;
+            justify-content: flex-start; padding-bottom: 15px; -ms-overflow-style: none; scrollbar-width: none;
         }
         .log-output::-webkit-scrollbar { display: none; }
-        .log-output { -ms-overflow-style: none; scrollbar-width: none; }
 
         .block { margin-bottom: 15px; line-height: 1.3; white-space: pre-wrap; text-shadow: none; }
         .block.system { opacity: 0.8; }
@@ -120,31 +109,18 @@
         .block.user-echo { font-weight: bold; opacity: 0.9; }
         .block.whip { color: var(--legislature); text-shadow: 0 0 2px var(--legislature); border-left: 3px solid var(--legislature); padding-left: 15px; font-weight: bold; }
 
-        /* UNIFIED INPUT STYLING */
-        .input-line {
-            display: flex; align-items: center; margin-top: auto;
-            flex-shrink: 0; display: none; padding-bottom: 8px; font-size: 24px;
-        }
+        .input-line { display: flex; align-items: center; margin-top: auto; flex-shrink: 0; display: none; padding-bottom: 8px; font-size: 24px; }
         .prompt { margin-right: 10px; font-weight: bold; text-shadow: none; }
-        
         .visual-input { white-space: pre; text-transform: lowercase; text-shadow: none; }
         .hidden-input { position: absolute; opacity: 0; left: -9999px; top: -9999px; pointer-events: none; }
-        
         .cursor {
             display: inline-block; width: 14px; height: 24px; background: var(--phosphor); 
             animation: blink 1s step-end infinite; margin-left: 2px; vertical-align: text-bottom; box-shadow: 0 0 2px var(--phosphor);
         }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-        .dashboard-area {
-            padding: 20px; display: flex; flex-direction: column; gap: 12px; 
-            background: rgba(10, 6, 0, 0.4); cursor: default; height: 100%; overflow: hidden; 
-        }
-
-        .panel {
-            border: 2px solid var(--phosphor); padding: 10px 15px;
-            box-shadow: inset 0 0 10px var(--dim); transition: border-color 0.3s; flex-shrink: 0; 
-        }
+        .dashboard-area { padding: 20px; display: flex; flex-direction: column; gap: 12px; background: rgba(10, 6, 0, 0.4); cursor: default; height: 100%; overflow: hidden; }
+        .panel { border: 2px solid var(--phosphor); padding: 10px 15px; box-shadow: inset 0 0 10px var(--dim); transition: border-color 0.3s; flex-shrink: 0; }
         .panel.war-mode { border-color: var(--war); box-shadow: inset 0 0 20px rgba(255, 68, 68, 0.2); }
         .panel.dark-mode { border-color: var(--dark); box-shadow: inset 0 0 20px rgba(179, 102, 255, 0.2); }
         .panel.legislature-mode { border-color: var(--legislature); box-shadow: inset 0 0 20px rgba(0, 170, 255, 0.2); }
@@ -152,24 +128,19 @@
         .panel-title { text-align: center; border-bottom: 2px solid var(--dim); padding-bottom: 5px; margin-bottom: 8px; letter-spacing: 2px; font-weight: bold; text-shadow: 0 0 1px currentColor; }
         .metric-header { display: grid; grid-template-columns: 1fr 80px 80px; font-size: 16px; opacity: 0.6; margin-bottom: 5px; text-align: right; border-bottom: 1px solid var(--dim); padding-bottom: 2px; }
         .mh-label { text-align: left; }
-        
         .metric-row { display: grid; grid-template-columns: 1fr 80px 80px; align-items: center; margin-bottom: 6px; cursor: help; }
         .metric-row:hover { background: var(--dim); }
         .metric-label { opacity: 0.8; text-shadow: none; }
         .metric-value { font-weight: bold; text-shadow: none; text-align: right; transition: color 0.3s;}
         .metric-target { opacity: 0.5; text-shadow: none; color: var(--phosphor); text-align: right; font-size: 20px; }
-
         .metric-value.warning { color: var(--danger); text-shadow: 0 0 2px var(--danger); }
         .metric-value.good { color: var(--good); text-shadow: 0 0 2px var(--good); }
-        .metric-value.warning + .metric-target { color: var(--danger); opacity: 0.7; }
-        .metric-value.good + .metric-target { color: var(--good); opacity: 0.7; }
 
         .dict-box {
             flex-grow: 1; border: 1px solid var(--dim); padding: 15px; font-size: 18px; line-height: 1.3; 
             background: rgba(255, 176, 0, 0.05); display: flex; flex-direction: column; overflow-y: auto; min-height: 80px; 
-            text-shadow: none; transition: all 0.3s;
+            text-shadow: none; transition: all 0.3s; -webkit-scrollbar: none;
         }
-        .dict-box::-webkit-scrollbar { display: none; }
         .context-title { font-weight: bold; font-size: 20px; margin-bottom: 6px; border-bottom: 1px solid var(--phosphor); padding-bottom: 4px; flex-shrink: 0; transition: color 0.3s, border-color 0.3s;}
         .context-def { margin-bottom: 8px; }
         .context-hist { font-style: italic; opacity: 0.9; border-left: 2px solid var(--phosphor); padding-left: 10px; color: var(--milton); }
@@ -182,43 +153,25 @@
         .cmd-item.dark-highlight { border: 1px solid var(--dark); color: var(--dark); text-align: center;}
         .cmd-item.whip-highlight { border: 1px solid var(--legislature); color: var(--legislature); text-align: center;}
 
-        .whip-grid {
-            display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
-            margin-top: 20px; padding: 15px; border: 1px solid var(--legislature);
-            background: rgba(0, 170, 255, 0.05);
-        }
-        .whip-vote {
-            display: flex; flex-direction: column; align-items: center;
-            padding: 8px; border-radius: 4px; font-size: 16px; cursor: help;
-        }
+        .whip-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 20px; padding: 15px; border: 1px solid var(--legislature); background: rgba(0, 170, 255, 0.05); }
+        .whip-vote { display: flex; flex-direction: column; align-items: center; padding: 8px; border-radius: 4px; font-size: 16px; cursor: help; }
         .vote-pending { background: rgba(255, 176, 0, 0.1); border: 1px solid var(--dim); }
         .vote-won { background: rgba(74, 246, 38, 0.2); border: 1px solid var(--good); }
         .vote-lost { background: rgba(255, 51, 0, 0.15); border: 1px solid var(--danger); opacity: 0.7; }
         .vote-type { font-size: 14px; margin-bottom: 4px; text-transform: uppercase; }
-        .vote-pork { color: #ffaa00; } 
-        .vote-protection { color: var(--war); }
-        .vote-compromised { color: var(--dark); }
+        .vote-pork { color: #ffaa00; } .vote-protection { color: var(--war); } .vote-compromised { color: var(--dark); }
         .whip-requirements { display: flex; gap: 15px; margin-bottom: 10px; font-size: 14px; opacity: 0.8; }
 
-        .sigint-container {
-            width: 100%; height: 300px;
-            position: relative; overflow: hidden;
-            display: flex; justify-content: center; align-items: center;
-            background: #000;
-        }
+        .sigint-container { width: 100%; height: 300px; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; background: #000; }
         
         .donor-overlay {
-            position: absolute; top: 5%; left: 5%; right: 5%; bottom: 20%;
-            background: rgba(179, 102, 255, 0.1);
-            border: 2px solid var(--dark); border-radius: 8px;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 200;
+            position: absolute; top: 5%; left: 5%; right: 5%; bottom: 20%; background: rgba(179, 102, 255, 0.1);
+            border: 2px solid var(--dark); border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; backdrop-filter: blur(5px);
         }
         .donor-header { font-size: 36px; color: var(--dark); margin-bottom: 20px; letter-spacing: 4px; text-shadow: 0 0 10px var(--dark); }
 
         .briefing-screen {
-            position: absolute; top: 5%; left: 0; right: 0; bottom: 20%;
-            display: flex; flex-direction: column; align-items: center;
+            position: absolute; top: 5%; left: 0; right: 0; bottom: 20%; display: flex; flex-direction: column; align-items: center;
             padding: 40px 80px; z-index: 100; background: rgba(10,6,0,0.95);
         }
         .briefing-screen h1 { font-size: 48px; letter-spacing: 2px; color: var(--phosphor); margin-bottom: 30px; text-shadow: none; }
@@ -243,7 +196,7 @@
 <body>
 
     <div class="hardware-bezel">
-        <div class="crt-screen" id="screen" onclick="focusTerminal()">
+        <div class="crt-screen" id="screen" onclick="window.focusTerminal()">
             <div class="scanlines"></div><div class="glow"></div>
             
             <div id="donorOverlay" class="donor-overlay" style="display:none;">
@@ -349,45 +302,33 @@
         </div>
 
         <div class="hardware-controls">
-            <div class="hw-btn" onclick="toggleSound()" title="TOGGLE SOUND">
+            <div class="hw-btn" onclick="window.toggleSound()" title="TOGGLE SOUND">
                 <div class="hw-led green on" id="soundLed"></div><div class="hw-icon">🔊</div>
             </div>
-            <div class="hw-btn" onclick="togglePower()" title="POWER">
+            <div class="hw-btn" onclick="window.togglePower()" title="POWER">
                 <div class="hw-led amber" id="powerLed"></div><div class="hw-icon power">⏻</div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- CORE STATE ---
+    (() => {
+        "use strict";
+
         const state = {
             isOn: false, soundEnabled: true, pendingEvent: null, activeScenario: null,
             mode: 'macro', subMode: null, turn: 1, maxTurns: 12, monthsToElection: 48,
             gdp: 2.1, unemployment: 5.1, inflation: 4.8, approval: 48, fedCredibility: 80, sp500: 4800, congress: 55, tariffRate: 5.0,
-            intRate: 5.0, 
-            hasPriceControls: false, currentCrisis: '', miltonAskedThisTurn: false,
-            warTurnTrigger: 99, 
+            intRate: 5.0, hasPriceControls: false, currentCrisis: '', miltonAskedThisTurn: false, warTurnTrigger: 99, 
             war: { enemyStrength: 100, tension: 50, casualties: 0, expenditure: 0, active: false },
             dark: { narrative: 45, compliance: 50, paranoia: 25, trust: 75 },
-            newsQueue: [], futureNews: [],
-            hasUsedExecutiveOrder: false,
-            
+            newsQueue: [], futureNews: [], hasUsedExecutiveOrder: false,
             whipState: {
                 active: false, votesWon: 0, votesNeeded: 15,
-                votes: Array(20).fill(null).map(() => ({
-                    id: Math.floor(Math.random() * 1000),
-                    type: Math.random() < 0.4 ? 'pork' : (Math.random() < 0.6 ? 'protection' : 'compromised'),
-                    status: 'pending'
-                }))
+                votes: Array(20).fill(null).map(() => ({ id: Math.floor(Math.random() * 1000), type: Math.random() < 0.4 ? 'pork' : (Math.random() < 0.6 ? 'protection' : 'compromised'), status: 'pending' }))
             },
-            sigintState: {
-                active: false, currentLevel: 1, maxLevels: 3,
-                targetSequence: [], playerSequence: [],
-                rawIntel: false 
-            },
-            donorIntercept: {
-                active: false, donorType: null, deal: null, pendingDecision: false
-            }
+            sigintState: { active: false, currentLevel: 1, maxLevels: 3, targetSequence: [], playerSequence: [], rawIntel: false },
+            donorIntercept: { active: false, donorType: null, deal: null, pendingDecision: false }
         };
 
         const DOM = {
@@ -397,118 +338,69 @@
             telemetry: document.getElementById('telemetryPanel'), cmdList: document.getElementById('cmdListArea'),
             dict: document.getElementById('dictBox'), dictTitle: document.getElementById('dictTitle'), dictDef: document.getElementById('dictDef'), dictHist: document.getElementById('dictHist'),
             prompt: document.getElementById('promptText'), tickerBar: document.getElementById('tickerBar'), tickerContent: document.getElementById('tickerContent'),
-            canvas: document.getElementById('artilleryCanvas'),
-            
-            briefingMode: document.getElementById('briefingMode'),
-            predecessorSummary: document.getElementById('predecessorSummary'),
-            briefingInputLine: document.getElementById('briefingInputLine'),
-            briefingCmd: document.getElementById('briefingCmd'),
-            briefingVisualInput: document.getElementById('briefingVisualInput'),
-            
-            whipMode: document.getElementById('whipMode'),
-            whipGrid: document.getElementById('whipGrid'),
-            whipStatus: document.getElementById('whipStatus'),
-            whipNotes: document.getElementById('whipNotes'),
-            whipInputLine: document.getElementById('whipInputLine'),
-            whipCmd: document.getElementById('whipCmd'),
-            whipVisualInput: document.getElementById('whipVisualInput'),
-            
-            sigintMode: document.getElementById('sigintMode'),
-            sigintCanvas: document.getElementById('sigintCanvas'),
-            targetPattern: document.getElementById('targetPattern'),
-            sigintStatus: document.getElementById('sigintStatus'),
-            sigintCmd: document.getElementById('sigintCmd'),
-            sigintInputLine: document.getElementById('sigintInputLine'),
-            sigintVisualInput: document.getElementById('sigintVisualInput'),
-            
-            donorOverlay: document.getElementById('donorOverlay'),
-            donorContent: document.getElementById('donorContent'),
-            donorInputLine: document.getElementById('donorInputLine'),
-            donorCmd: document.getElementById('donorCmd'),
-            donorVisualInput: document.getElementById('donorVisualInput')
+            canvas: document.getElementById('artilleryCanvas'), briefingMode: document.getElementById('briefingMode'),
+            predecessorSummary: document.getElementById('predecessorSummary'), briefingInputLine: document.getElementById('briefingInputLine'),
+            briefingCmd: document.getElementById('briefingCmd'), briefingVisualInput: document.getElementById('briefingVisualInput'),
+            whipMode: document.getElementById('whipMode'), whipGrid: document.getElementById('whipGrid'), whipStatus: document.getElementById('whipStatus'),
+            whipNotes: document.getElementById('whipNotes'), whipInputLine: document.getElementById('whipInputLine'),
+            whipCmd: document.getElementById('whipCmd'), whipVisualInput: document.getElementById('whipVisualInput'),
+            sigintMode: document.getElementById('sigintMode'), sigintCanvas: document.getElementById('sigintCanvas'), targetPattern: document.getElementById('targetPattern'),
+            sigintStatus: document.getElementById('sigintStatus'), sigintCmd: document.getElementById('sigintCmd'),
+            sigintInputLine: document.getElementById('sigintInputLine'), sigintVisualInput: document.getElementById('sigintVisualInput'),
+            donorOverlay: document.getElementById('donorOverlay'), donorContent: document.getElementById('donorContent'),
+            donorInputLine: document.getElementById('donorInputLine'), donorCmd: document.getElementById('donorCmd'), donorVisualInput: document.getElementById('donorVisualInput')
         };
 
-        // --- DICTIONARIES & SCENARIOS ---
         const historicalScenarios = {
             '1929': {
-                id: '1929',
-                name: "THE GREAT DEPRESSION (1929-1933)",
-                admin: "Hoover Administration",
-                duration: 16,
+                id: '1929', name: "THE GREAT DEPRESSION (1929-1933)", admin: "Hoover Administration", duration: 16,
                 start: { gdp: 5.0, unemployment: 3.2, inflation: 0.0, sp500: 380, intRate: 5.0, tariffRate: 13.5, approval: 60 },
-                shocks: {
-                    2: { msg: "[BLACK TUESDAY] Panic selling liquidates millions of retail accounts.", eff: () => { state.sp500 -= 150; state.gdp -= 5.0; state.unemployment += 4.0; } },
-                    6: { msg: "[BANKING COLLAPSE] Run on institutions. Liquidity evaporates.", eff: () => { state.sp500 -= 50; state.gdp -= 4.0; state.unemployment += 5.0; state.inflation -= 5.0; } }
-                },
-                historicalBaseline: {
-                    actions: "Smoot-Hawley Tariffs [ta] raised to 20%+, massive tax hikes [tx] to balance budget, wage controls.",
-                    results: "GDP contracted -30%, Unemployment peaked at 24.9%, Deflation hit -10%.",
-                    miltonAnalysis: "Hoover and Congress engineered a localized stock crash into a global depression. Raising taxes during a liquidity crisis and taxing imports via Smoot-Hawley destroyed global trade and structural capital."
-                }
+                shocks: { 2: { msg: "[BLACK TUESDAY] Panic selling liquidates millions of retail accounts.", eff: () => { state.sp500 -= 150; state.gdp -= 5.0; state.unemployment += 4.0; } }, 6: { msg: "[BANKING COLLAPSE] Run on institutions. Liquidity evaporates.", eff: () => { state.sp500 -= 50; state.gdp -= 4.0; state.unemployment += 5.0; state.inflation -= 5.0; } } },
+                historicalBaseline: { actions: "Smoot-Hawley Tariffs [ta] raised to 20%+, massive tax hikes [tx] to balance budget, wage controls.", results: "GDP contracted -30%, Unemployment peaked at 24.9%, Deflation hit -10%.", miltonAnalysis: "Hoover and Congress engineered a localized stock crash into a global depression. Raising taxes during a liquidity crisis and taxing imports via Smoot-Hawley destroyed global trade and structural capital." }
             },
             '1980': {
-                id: '1980',
-                name: "THE STAGFLATION CRISIS (1980-1984)",
-                admin: "Reagan / Volcker",
-                duration: 16,
+                id: '1980', name: "THE STAGFLATION CRISIS (1980-1984)", admin: "Reagan / Volcker", duration: 16,
                 start: { gdp: -0.2, unemployment: 7.1, inflation: 13.5, sp500: 110, intRate: 11.0, tariffRate: 5.0, approval: 51 },
-                shocks: {
-                    3: { msg: "[ENERGY CRISIS] Oil embargo shockwaves continue to constrain supply.", eff: () => { state.inflation += 2.0; state.gdp -= 1.0; } },
-                    8: { msg: "[RECESSION GRIPS] High rates trigger deep structural recession.", eff: () => { state.unemployment += 3.0; state.approval -= 15; } }
-                },
-                historicalBaseline: {
-                    actions: "Volcker hiked Fed Funds rate [rr] to 20% to break inflation. Reagan cut taxes [tx] and deregulated [dr].",
-                    results: "Severe immediate recession (unemployment >10%), followed by inflation breaking to 4% and GDP booming to 7.2% by 1984.",
-                    miltonAnalysis: "The Volcker Shock was brutal, unvarnished mathematical medicine. They took the political hit, crushed the money supply, and allowed the system to clear its ledgers. It cost them the midterm elections but saved the currency."
-                }
+                shocks: { 3: { msg: "[ENERGY CRISIS] Oil embargo shockwaves continue to constrain supply.", eff: () => { state.inflation += 2.0; state.gdp -= 1.0; } }, 8: { msg: "[RECESSION GRIPS] High rates trigger deep structural recession.", eff: () => { state.unemployment += 3.0; state.approval -= 15; } } },
+                historicalBaseline: { actions: "Volcker hiked Fed Funds rate [rr] to 20% to break inflation. Reagan cut taxes [tx] and deregulated [dr].", results: "Severe immediate recession (unemployment >10%), followed by inflation breaking to 4% and GDP booming to 7.2% by 1984.", miltonAnalysis: "The Volcker Shock was brutal, unvarnished mathematical medicine. They took the political hit, crushed the money supply, and allowed the system to clear its ledgers. It cost them the midterm elections but saved the currency." }
             }
         };
 
         const contextDict = {
             'election': { title: "ELECTION COUNTDOWN", def: "The ultimate accountability mechanism.", hist: "Voters almost always punish structural reality if it causes them immediate financial pain at the grocery store." },
             'gdp': { title: "GROSS DOMESTIC PRODUCT", def: "Total economic output. Fails to distinguish between productive capital and wasteful deficit spending.", hist: "Juicing GDP with printed money looks like a boom right before it feels like a bust." },
-            'unemployment': { title: "UNEMPLOYMENT RATE", def: "The percentage of the labor force without work. A 'natural rate' exists to allow labor to move to where it is needed.", hist: "The Phillips Curve tradeoff is an illusion. Trying to artificially force unemployment to zero via stimulus guarantees runaway inflation." },
-            'inflation': { title: "INFLATION (PCE)", def: "Inflation is always and everywhere a monetary phenomenon. It is taxation without representation, driven by expanding the money supply.", hist: "It requires brutal, sustained interest rate hikes to break the psychological loop of inflation once it begins." },
+            'unemployment': { title: "UNEMPLOYMENT RATE", def: "The percentage of the labor force without work.", hist: "The Phillips Curve tradeoff is an illusion. Trying to artificially force unemployment to zero via stimulus guarantees runaway inflation." },
+            'inflation': { title: "INFLATION (PCE)", def: "Inflation is always and everywhere a monetary phenomenon.", hist: "It requires brutal, sustained interest rate hikes to break the psychological loop of inflation once it begins." },
             'sp500': { title: "S&P 500 INDEX", def: "Broad market equity valuation. Highly addicted to cheap debt and quantitative easing.", hist: "Wall Street routinely threatens crash scenarios to force the Federal Reserve to capitulate and cut rates." },
-            'approval': { title: "APPROVAL RATING", def: "Your political capital. Taking necessary economic medicine drops this immediately, but maintaining structural stability recovers it over time.", hist: "Doing the right economic thing usually costs you re-election. Doing the wrong thing guarantees a crisis for your successor." },
+            'approval': { title: "APPROVAL RATING", def: "Your political capital.", hist: "Doing the right economic thing usually costs you re-election. Doing the wrong thing guarantees a crisis for your successor." },
             'congress': { title: "CONGRESSIONAL APP", def: "Legislative tolerance.", hist: "If this drops below 15%, impeachment proceedings become a mathematical certainty regardless of partisan loyalty." },
-            'fed': { title: "FED CREDIBILITY", def: "The market's belief that the central bank will act independently to maintain price stability, even when the President begs them not to.", hist: "Arthur Burns famously capitulated to President Nixon's demands for low rates prior to the 1972 election, sparking a decade of stagflation." },
-            'intRate': { title: "FED FUNDS RATE", def: "The actual cost of capital. High rates act as brakes on GDP/SPX but are required to control inflation.", hist: "Paul Volcker's 20% rates in 1980 crushed inflation but triggered a deep recession." },
-            'tariffs': { title: "AVERAGE TARIFF RATE", def: "A direct tax levied on your own domestic consumers under the guise of punishing foreigners.", hist: "The Smoot-Hawley Tariff Act of 1930 drastically worsened the Great Depression by triggering a catastrophic global trade war." },
+            'fed': { title: "FED CREDIBILITY", def: "The market's belief that the central bank will act independently.", hist: "Arthur Burns famously capitulated to President Nixon's demands for low rates prior to the 1972 election, sparking a decade of stagflation." },
+            'intRate': { title: "FED FUNDS RATE", def: "The actual cost of capital. High rates act as brakes on GDP/SPX.", hist: "Paul Volcker's 20% rates in 1980 crushed inflation but triggered a deep recession." },
+            'tariffs': { title: "AVERAGE TARIFF RATE", def: "A direct tax levied on your own domestic consumers.", hist: "The Smoot-Hawley Tariff Act of 1930 drastically worsened the Great Depression by triggering a catastrophic global trade war." },
             'strength': { title: "ENEMY STRENGTH", def: "Remaining combat capacity of the hostile force.", hist: "Reaching 0% signifies theater victory and forces capitulation." },
             'tension': { title: "THEATER TENSION", def: "The likelihood of a global escalation or nuclear exchange.", hist: "Reaching 100% triggers Mutually Assured Destruction. The ultimate failure of diplomacy." },
-            'casualties': { title: "CASUALTIES", def: "American lives lost. Drags heavily and permanently on domestic approval.", hist: "Prolonged kinetic engagements with mounting body counts reliably destroy incumbent administrations." },
-            'expenditure': { title: "WAR EXPENDITURE", def: "Billions of dollars burned in the theater. Will hit the macro economy upon return.", hist: "War is the ultimate destroyer of economic capital. The bills always come due on the home front." },
+            'casualties': { title: "CASUALTIES", def: "American lives lost.", hist: "Prolonged kinetic engagements with mounting body counts reliably destroy incumbent administrations." },
+            'expenditure': { title: "WAR EXPENDITURE", def: "Billions of dollars burned in the theater.", hist: "War is the ultimate destroyer of economic capital. The bills always come due on the home front." },
             'narrative': { title: "NARRATIVE CONTROL", def: "Percentage of the population accepting the state-sanctioned reality.", hist: "Requires constant algorithmic and financial expenditure to maintain against the natural entropy of truth." },
-            'compliance': { title: "PRESS COMPLIANCE", def: "Media willingness to repeat executive talking points without adversarial friction.", hist: "Operation Mockingbird demonstrated the utility of embedded assets in editorial boards." },
+            'compliance': { title: "PRESS COMPLIANCE", def: "Media willingness to repeat executive talking points.", hist: "Operation Mockingbird demonstrated the utility of embedded assets in editorial boards." },
             'paranoia': { title: "PUBLIC PARANOIA", def: "Societal fracture and conspiracy adoption.", hist: "When the official narrative diverges too far from observed reality, institutional collapse follows. (>80% is critical)" },
             'trust': { title: "INSTITUTIONAL TRUST", def: "Public faith in the structural integrity of the state.", hist: "Takes decades to build, can be spent in a single term, and is nearly impossible to restore once lost." }
         };
 
         const macroCommands = {
-            'rr': { shortcut: 'rr', name: 'RAISE RATES', effect: () => { 
-                state.intRate += 1.0; state.gdp-=0.6; state.inflation-=0.8; state.unemployment+=0.5; 
-                state.sp500-=300; state.fedCredibility+=5; state.approval-=2; state.congress+=2; 
-                queueNews("[FED WATCH] Chairman announces aggressive rate hike.", 0); 
-                queueNews("[HOUSING] Mortgage applications plummet as borrowing costs soar.", 2); 
-            } },
-            'cr': { shortcut: 'cr', name: 'CUT RATES', effect: () => { 
-                state.intRate = Math.max(0.5, state.intRate - 1.0); state.gdp+=0.5; state.inflation+=0.7; state.unemployment-=0.3; 
-                state.sp500+=400; state.fedCredibility-=6; state.approval+=3; 
-                queueNews("[MARKETS] Fed slashes rates. Easy money returns.", 0); 
-                queueNews("[ECONOMY] Asset bubbles expanding rapidly amid cheap liquidity.", 2); 
-            } },
-            'is': { shortcut: 'is', name: 'INC SPENDING', effect: () => { state.gdp+=0.4; state.inflation+=0.5; state.unemployment-=0.2; state.sp500+=150; state.approval+=2; state.congress+=5; queueNews("[GOV] Spending bill signed into law.", 0); queueNews("[TREASURY] National deficit swells; bond yields rise.", 2); } },
-            'cs': { shortcut: 'cs', name: 'CUT SPENDING', effect: () => { state.gdp-=0.3; state.inflation-=0.4; state.unemployment+=0.2; state.sp500-=100; state.approval-=2; state.congress-=3; queueNews("[POLICY] White House implements austerity measures.", 0); queueNews("[DOMESTIC] Public sector layoffs trigger protests.", 2); } },
-            'ms': { shortcut: 'ms', name: 'STIMULUS', effect: () => { state.gdp+=0.8; state.inflation+=1.5; state.unemployment-=0.6; state.sp500+=600; state.fedCredibility-=10; state.approval+=5; state.congress+=10; queueNews("[BREAKING] Trillions authorized in emergency relief.", 0); queueNews("[INFLATION] 'Transitory' narrative collapses as CPI surges.", 2); } },
+            'rr': { shortcut: 'rr', name: 'RAISE RATES', effect: () => { state.intRate += 1.0; state.gdp-=0.6; state.inflation-=0.8; state.unemployment+=0.5; state.sp500-=300; state.fedCredibility+=5; state.approval-=2; state.congress+=2; queueNews("[FED WATCH] Chairman announces aggressive rate hike.", 0); } },
+            'cr': { shortcut: 'cr', name: 'CUT RATES', effect: () => { state.intRate = Math.max(0.5, state.intRate - 1.0); state.gdp+=0.5; state.inflation+=0.7; state.unemployment-=0.3; state.sp500+=400; state.fedCredibility-=6; state.approval+=3; queueNews("[MARKETS] Fed slashes rates. Easy money returns.", 0); } },
+            'is': { shortcut: 'is', name: 'INC SPENDING', effect: () => { state.gdp+=0.4; state.inflation+=0.5; state.unemployment-=0.2; state.sp500+=150; state.approval+=2; state.congress+=5; queueNews("[GOV] Spending bill signed into law.", 0); } },
+            'cs': { shortcut: 'cs', name: 'CUT SPENDING', effect: () => { state.gdp-=0.3; state.inflation-=0.4; state.unemployment+=0.2; state.sp500-=100; state.approval-=2; state.congress-=3; queueNews("[POLICY] White House implements austerity measures.", 0); } },
+            'ms': { shortcut: 'ms', name: 'STIMULUS', effect: () => { state.gdp+=0.8; state.inflation+=1.5; state.unemployment-=0.6; state.sp500+=600; state.fedCredibility-=10; state.approval+=5; state.congress+=10; queueNews("[BREAKING] Trillions authorized in emergency relief.", 0); } },
             'dr': { shortcut: 'dr', name: 'DEREGULATE', effect: () => { state.gdp+=0.4; state.inflation-=0.2; state.unemployment-=0.2; state.sp500+=150; state.approval+=1; state.congress-=2; queueNews("[BIZ] Sweeping deregulation enacted across key sectors.", 0); } },
-            'ta': { shortcut: 'ta', name: 'RAISE TARIFFS', effect: () => { state.tariffRate+=5.0; state.sp500-=250; state.congress+=2; queueNews("[TRADE] Administration enacts sweeping tariffs.", 0); queueNews("[GLOBAL] Trading partners announce retaliatory levies.", 2); } },
+            'ta': { shortcut: 'ta', name: 'RAISE TARIFFS', effect: () => { state.tariffRate+=5.0; state.sp500-=250; state.congress+=2; queueNews("[TRADE] Administration enacts sweeping tariffs.", 0); } },
             'ft': { shortcut: 'ft', name: 'FREE TRADE', effect: () => { state.tariffRate=Math.max(0, state.tariffRate-5.0); state.sp500+=150; state.gdp+=0.2; queueNews("[TRADE] Tariffs slashed. Borders open.", 0); } },
-            'pc': { shortcut: 'pc', name: 'PRICE CONTROLS', effect: () => { state.inflation-=1.5; state.gdp-=1.2; state.sp500-=500; state.unemployment+=0.8; state.hasPriceControls=true; state.congress-=10; queueNews("[POLICY] Executive order freezes consumer prices.", 0); queueNews("[MAIN STREET] Empty shelves reported. Black market premiums hit 300%.", 2); } },
+            'pc': { shortcut: 'pc', name: 'PRICE CONTROLS', effect: () => { state.inflation-=1.5; state.gdp-=1.2; state.sp500-=500; state.unemployment+=0.8; state.hasPriceControls=true; state.congress-=10; queueNews("[POLICY] Executive order freezes consumer prices.", 0); } },
             'qe': { shortcut: 'qe', name: 'QUANTITATIVE EASING', effect: () => { state.sp500+=800; state.inflation+=2.0; state.fedCredibility-=15; state.approval+=2; queueNews("[FED WATCH] Central bank expands balance sheet exponentially.", 0); print("MILTON: Quantitative Easing. A polite term for printing money to buy your own debt. Asset holders rejoice, the working class pays the inflation tax.", 'milton'); } },
             'tx': { shortcut: 'tx', name: 'RAISE TAXES', effect: () => { state.gdp-=0.8; state.sp500-=400; state.inflation-=0.3; state.approval-=5; queueNews("[GOV] Major corporate and income tax hikes enacted.", 0); print("MILTON: You're taxing productive capital to fund state inefficiency. It might balance the spreadsheet, but it kills the engine.", 'milton'); } },
             'dn': { shortcut: 'dn', name: 'DO NOTHING', effect: () => { state.gdp-=0.1; state.inflation-=0.2; state.sp500+=50; queueNews("[CAPITAL] Administration stays the course. Markets digest inaction.", 0); } },
-            'ng': { shortcut: 'ng', name: 'NEGOTIATE', effect: () => { state.sp500+=400; state.inflation-=1.0; state.approval-=5; state.congress-=8; queueNews("[GLOBAL] Diplomatic settlement reached. Kinetic action avoided.", 0); queueNews("[POLITICS] Critics slam administration for projecting weakness.", 1); } },
+            'ng': { shortcut: 'ng', name: 'NEGOTIATE', effect: () => { state.sp500+=400; state.inflation-=1.0; state.approval-=5; state.congress-=8; queueNews("[GLOBAL] Diplomatic settlement reached. Kinetic action avoided.", 0); } },
             'dm': { shortcut: 'dm', name: 'DEPLOY MILITARY', effect: () => { triggerWarMode(); queueNews("[BREAKING] KINETIC ACTION AUTHORIZED. MILITARY DEPLOYED.", 0); } },
             'do': { shortcut: 'do', name: 'DARK OPS', effect: () => { triggerDarkMode(); queueNews("[MEDIA] Sudden shift in editorial narratives noticed across networks.", 0); } }
         };
@@ -530,7 +422,7 @@
         };
 
         const crisisProfiles = {
-            'inflation': { chief: "CHIEF OF STAFF: Sir, groceries are up 12%. The base is getting crushed and the media is running 24/7 segments on 'Greedflation.' I strongly advise PRICE CONTROLS [pc].", milton: "MILTON: If you cap prices below the market clearing rate, producers will simply stop producing. You'll get your positive headline today, and nationwide supply chain failure next month. Restrict the money supply [rr] or [cs]." },
+            'inflation': { chief: "CHIEF OF STAFF: Sir, groceries are up 12%. I strongly advise PRICE CONTROLS [pc].", milton: "MILTON: If you cap prices below the market clearing rate, producers will simply stop producing. You'll get your positive headline today, and nationwide supply chain failure next month. Restrict the money supply [rr] or [cs]." },
             'unemployment': { chief: "CHIEF OF STAFF: The rust belt is bleeding jobs. Authorize MASSIVE STIMULUS [ms] or slap TARIFFS [ta] on imports.", milton: "MILTON: Tariffs don't protect workers; they subsidize domestic monopolies by placing a hidden sales tax on citizens. Deregulate [dr] and let dead capital reallocate organically." },
             'market_crash': { chief: "CHIEF OF STAFF: The S&P is in freefall! Demand the Fed execute QUANTITATIVE EASING [qe] or CUT RATES [cr] immediately!", milton: "MILTON: The Chief is advocating for the privatization of profits and the socialization of losses. Wall Street took leveraged risks, let them burn [dn]." },
             'approval_drop': { chief: "CHIEF OF STAFF: We are sub-40%. We need to buy back the public's affection. INCREASE SPENDING [is] on direct subsidies.", milton: "MILTON: You are attempting to bribe the electorate with their own grandchildren's money. You are cannibalizing tomorrow's structural growth for today's polling bump." },
@@ -544,7 +436,6 @@
             { donor: "TECH GIANTS", dealName: "AI Data Access", effect: () => { state.approval += 8; state.gdp += 0.5; state.dark.compliance -= 15; }, miltonCommentary: "MILTON: You're giving Silicon Valley unfettered access to America's data.", condition: () => state.dark.narrative < 80 }
         ];
 
-        // --- AUDIO ENGINE ---
         let audioCtx; let clickBuffer; let humOscillator;
 
         function initAudio() {
@@ -556,7 +447,7 @@
                 clickBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
                 const data = clickBuffer.getChannelData(0);
                 for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-            } catch (e) { console.warn("Audio Context Failed:", e); state.soundEnabled = false; DOM.sLed.classList.remove('on'); }
+            } catch (e) { console.warn("Audio Context Failed"); state.soundEnabled = false; DOM.sLed.classList.remove('on'); }
         }
 
         function playHum() {
@@ -578,8 +469,7 @@
         }
 
         function playClick() {
-            if (!audioCtx || !state.soundEnabled) return;
-            if (!clickBuffer) return; 
+            if (!audioCtx || !state.soundEnabled || !clickBuffer) return; 
             const source = audioCtx.createBufferSource(); source.buffer = clickBuffer;
             const filter = audioCtx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.value = 4000;
             const gain = audioCtx.createGain(); gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.015);
@@ -591,14 +481,12 @@
             const t = audioCtx.currentTime;
             const playPing = (time) => {
                 const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-                osc.type = isDark ? 'square' : 'sine';
-                osc.frequency.setValueAtTime(isDark ? 600 : 1200, time);
+                osc.type = isDark ? 'square' : 'sine'; osc.frequency.setValueAtTime(isDark ? 600 : 1200, time);
                 osc.frequency.exponentialRampToValueAtTime(isDark ? 400 : 800, time + 0.1);
                 gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(0.4, time + 0.02); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
                 osc.connect(gain); gain.connect(audioCtx.destination); osc.start(time); osc.stop(time + 0.15);
             };
-            playPing(t); playPing(t + 0.12);
-            if (isDark) playPing(t + 0.24);
+            playPing(t); playPing(t + 0.12); if (isDark) playPing(t + 0.24);
         }
 
         function playLaunch() {
@@ -620,8 +508,7 @@
         function playWhipSuccess() {
             if (!audioCtx || !state.soundEnabled) return;
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-            osc.type = 'sine'; osc.frequency.setValueAtTime(600, audioCtx.currentTime); 
-            osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.3);
+            osc.type = 'sine'; osc.frequency.setValueAtTime(600, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.3);
             gain.gain.setValueAtTime(0.5, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
             osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.4);
         }
@@ -629,8 +516,7 @@
         function playWhipFail() {
             if (!audioCtx || !state.soundEnabled) return;
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, audioCtx.currentTime); 
-            osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
             gain.gain.setValueAtTime(0.5, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
             osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.4);
         }
@@ -640,8 +526,7 @@
             const t = audioCtx.currentTime;
             const playRing = () => {
                 const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-                osc.type = 'square'; osc.frequency.setValueAtTime(800, t);
-                osc.frequency.exponentialRampToValueAtTime(600, t + 0.2);
+                osc.type = 'square'; osc.frequency.setValueAtTime(800, t); osc.frequency.exponentialRampToValueAtTime(600, t + 0.2);
                 gain.gain.setValueAtTime(0.3, t); gain.gain.linearRampToValueAtTime(0.01, t + 0.3);
                 osc.connect(gain); gain.connect(audioCtx.destination); osc.start(t); osc.stop(t + 0.3);
             };
@@ -654,83 +539,47 @@
             else { DOM.sLed.classList.remove('on'); stopHum(); }
         }
 
-        // --- FOCUS MANAGEMENT ---
+        function disableInput() {
+            DOM.cmd.disabled = true; DOM.whipCmd.disabled = true; DOM.briefingCmd.disabled = true; DOM.sigintCmd.disabled = true; if(DOM.donorCmd) DOM.donorCmd.disabled = true;
+            DOM.inputLine.style.display = 'none'; DOM.sigintMode.style.display = 'none'; DOM.donorOverlay.style.display = 'none';
+        }
+
         function focusTerminal() { 
             if (!state.isOn) return;
-            
-            if (DOM.briefingMode.style.display !== 'none') {
-                if (!DOM.briefingCmd.disabled) DOM.briefingCmd.focus();
-            } else if (DOM.whipMode.style.display !== 'none') {
-                if (!DOM.whipCmd.disabled) DOM.whipCmd.focus();
-            } else if (DOM.sigintMode.style.display !== 'none') {
-                if (!DOM.sigintCmd.disabled) DOM.sigintCmd.focus();
-            } else if (DOM.donorOverlay.style.display !== 'none') {
-                if (!DOM.donorCmd.disabled) DOM.donorCmd.focus();
-            } else {
-                if (!DOM.cmd.disabled) DOM.cmd.focus();
-            }
+            if (DOM.briefingMode.style.display !== 'none' && !DOM.briefingCmd.disabled) { DOM.briefingCmd.focus(); }
+            else if (DOM.whipMode.style.display !== 'none' && !DOM.whipCmd.disabled) { DOM.whipCmd.focus(); }
+            else if (DOM.sigintMode.style.display !== 'none' && !DOM.sigintCmd.disabled) { DOM.sigintCmd.focus(); }
+            else if (DOM.donorOverlay.style.display !== 'none' && !DOM.donorCmd.disabled) { DOM.donorCmd.focus(); }
+            else if (!DOM.cmd.disabled) { DOM.cmd.focus(); }
         }
         
         function enableBriefingInput() {
-            DOM.briefingCmd.disabled = false;
-            DOM.briefingCmd.value = '';
-            
-            DOM.predecessorSummary.innerHTML = `
-                Standard Sandbox: Type [play]<br><br>
-                <span style="color:var(--dark)">--- OR LOAD HISTORICAL ENVIRONMENT ---</span><br>
-                [1929] - The Great Depression<br>
-                [1980] - The Stagflation Crisis
-            `;
-
-            DOM.briefingVisualInput.textContent = '';
-            DOM.briefingInputLine.style.display = 'flex';
-            DOM.briefingCmd.focus();
+            disableInput(); DOM.briefingCmd.disabled = false; DOM.briefingCmd.value = '';
+            DOM.predecessorSummary.innerHTML = `Standard Sandbox: Type [play]<br><br><span style="color:var(--dark)">--- OR LOAD HISTORICAL ENVIRONMENT ---</span><br>[1929] - The Great Depression<br>[1980] - The Stagflation Crisis`;
+            DOM.briefingVisualInput.textContent = ''; DOM.briefingInputLine.style.display = 'flex'; DOM.briefingCmd.focus();
         }
 
         function enableDonorInput() {
-            DOM.donorCmd.disabled = false;
-            DOM.donorCmd.value = '';
-            DOM.donorVisualInput.textContent = '';
-            DOM.donorCmd.focus();
+            DOM.donorCmd.disabled = false; DOM.donorCmd.value = ''; DOM.donorVisualInput.textContent = ''; DOM.donorCmd.focus();
         }
 
         function enableWhipInput() {
-            DOM.whipCmd.disabled = false;
-            DOM.whipCmd.value = '';
-            DOM.whipVisualInput.textContent = '';
-            DOM.whipInputLine.style.display = 'flex';
-            DOM.whipCmd.focus();
+            DOM.whipCmd.disabled = false; DOM.whipCmd.value = ''; DOM.whipVisualInput.textContent = ''; DOM.whipInputLine.style.display = 'flex'; DOM.whipCmd.focus();
         }
 
         function enableSigintInput() {
-            DOM.sigintCmd.disabled = false;
-            DOM.sigintCmd.value = '';
-            DOM.sigintVisualInput.textContent = '';
-            DOM.sigintInputLine.style.display = 'flex';
-            DOM.sigintCmd.focus();
+            DOM.sigintCmd.disabled = false; DOM.sigintCmd.value = ''; DOM.sigintVisualInput.textContent = ''; DOM.sigintInputLine.style.display = 'flex'; DOM.sigintCmd.focus();
         }
 
-        function enableInput() { DOM.inputLine.style.display = 'flex'; DOM.cmd.disabled = false; focusTerminal(); }
-        
-        function disableInput() {
-            DOM.cmd.disabled = true;
-            DOM.whipCmd.disabled = true;
-            DOM.briefingCmd.disabled = true;
-            DOM.sigintCmd.disabled = true;
-            if(DOM.donorCmd) DOM.donorCmd.disabled = true;
-            DOM.sigintMode.style.display = 'none';
-            DOM.donorOverlay.style.display = 'none';
+        function enableInput() { 
+            disableInput(); DOM.inputLine.style.display = 'flex'; DOM.cmd.disabled = false; focusTerminal(); 
         }
 
         function print(text, type = 'system') { 
-            const div = document.createElement('div'); 
-            div.className = `block ${type}`; 
-            div.innerHTML = text; 
-            DOM.log.appendChild(div); 
-            DOM.log.scrollTop = DOM.log.scrollHeight; 
+            const div = document.createElement('div'); div.className = `block ${type}`; div.innerHTML = text; 
+            DOM.log.appendChild(div); DOM.log.scrollTop = DOM.log.scrollHeight; 
         }
 
-        // --- TICKER LOGIC ---
         function queueNews(msg, delayTurns) {
             if (delayTurns === 0) state.newsQueue.push(msg); else state.futureNews.push({ turn: state.turn + delayTurns, msg: msg });
         }
@@ -746,13 +595,10 @@
         }
 
         function processTicker() {
-            state.futureNews = state.futureNews.filter(event => {
-                if (event.turn <= state.turn) { state.newsQueue.push(event.msg); return false; } return true; 
-            });
+            state.futureNews = state.futureNews.filter(event => { if (event.turn <= state.turn) { state.newsQueue.push(event.msg); return false; } return true; });
             let activeNews = [...state.newsQueue, ...generateAmbientNews()];
             if (activeNews.length === 0) activeNews = ["[SYSTEM] ALL METRICS NOMINAL. NO BREAKING REPORTS AT THIS TIME."];
             activeNews.sort(() => Math.random() - 0.5);
-            
             DOM.tickerContent.innerHTML = activeNews.join(" &nbsp;&nbsp; // &nbsp;&nbsp; ");
             if (DOM.tickerContent.dataset.lastUpdate !== state.turn.toString()) {
                 DOM.tickerContent.style.animation = 'none'; void DOM.tickerContent.offsetWidth;
@@ -761,7 +607,6 @@
             state.newsQueue = []; 
         }
 
-        // --- DASHBOARDS ---
         function renderMacroDashboard() {
             DOM.telemetry.className = 'panel'; DOM.screen.className = 'crt-screen on'; DOM.prompt.textContent = "POTUS:~$";
             const gdpClass = state.gdp >= 3.0 ? 'good' : (state.gdp < 1.5 ? 'warning' : '');
@@ -788,7 +633,6 @@
                 <div class="metric-row hover-term" data-term="fed"><span class="metric-label">FED CREDIBILITY:</span><span class="metric-value ${state.fedCredibility>=80?'good':(state.fedCredibility<50?'warning':'')}">${Math.round(state.fedCredibility)}%</span><span class="metric-target">80%</span></div>
                 <div class="metric-row hover-term" data-term="tariffs"><span class="metric-label">AVG TARIFF:</span><span class="metric-value ${state.tariffRate<=0?'good':(state.tariffRate>10?'warning':'')}">${state.tariffRate.toFixed(1)}%</span><span class="metric-target">0.0%</span></div>
             `;
-            
             DOM.cmdList.innerHTML = `
                 <div style="text-align:center; font-weight:bold; padding-bottom:3px; opacity:0.8;">DIRECTIVES (Chain with commas)</div>
                 <div class="cmd-item highlight" style="margin-top:5px;">[am] ASK MILTON (Economic Counsel)</div>
@@ -806,10 +650,7 @@
         function renderWarDashboard() {
             DOM.telemetry.className = 'panel war-mode'; DOM.screen.className = 'crt-screen on war-mode'; 
             DOM.prompt.textContent = state.subMode === 'artillery' ? "SOLUTION:~$" : "COMMAND:~$";
-            const strClass = state.war.enemyStrength <= 0 ? 'good' : '';
-            const tenClass = state.war.tension >= 80 ? 'warning' : '';
-            const appClass = state.approval >= 51 ? 'good' : (state.approval < 40 ? 'warning' : '');
-
+            const strClass = state.war.enemyStrength <= 0 ? 'good' : ''; const tenClass = state.war.tension >= 80 ? 'warning' : ''; const appClass = state.approval >= 51 ? 'good' : (state.approval < 40 ? 'warning' : '');
             DOM.telemetry.innerHTML = `
                 <div class="panel-title" style="color:var(--danger); border-bottom-color:var(--danger);">THEATER COMMAND</div>
                 <div class="metric-header" style="border-bottom-color:var(--danger);"><span class="mh-label">METRIC</span><span class="mh-val">ACTUAL</span><span class="mh-tgt">TARGET</span></div>
@@ -820,23 +661,10 @@
                 <div style="height:10px; border-bottom: 1px dashed var(--danger); margin-bottom: 10px;"></div>
                 <div class="metric-row hover-term" data-term="approval"><span class="metric-label">DOMESTIC APP:</span><span class="metric-value ${appClass}">${Math.round(state.approval)}%</span><span class="metric-target">51%</span></div>
             `;
-            
             if (state.subMode === 'artillery') {
-                DOM.cmdList.innerHTML = `
-                    <div style="text-align:center; font-weight:bold; padding-bottom:3px; color:var(--danger); opacity:0.8;">MANUAL TARGETING ACTIVE</div>
-                    <div class="cmd-item" style="grid-column:span 2; text-align:center; margin-top:10px;">ENTER: ANGLE, YIELD (e.g. 45, 80)</div>
-                    <div class="cmd-item" style="grid-column:span 2; text-align:center; color:var(--phosphor); margin-top:5px;">[wd] Abort Fire Mission</div>
-                `;
+                DOM.cmdList.innerHTML = `<div style="text-align:center; font-weight:bold; padding-bottom:3px; color:var(--danger); opacity:0.8;">MANUAL TARGETING ACTIVE</div><div class="cmd-item" style="grid-column:span 2; text-align:center; margin-top:10px;">ENTER: ANGLE, YIELD (e.g. 45, 80)</div><div class="cmd-item" style="grid-column:span 2; text-align:center; color:var(--phosphor); margin-top:5px;">[wd] Abort Fire Mission</div>`;
             } else {
-                DOM.cmdList.innerHTML = `
-                    <div style="text-align:center; font-weight:bold; padding-bottom:3px; color:var(--danger); opacity:0.8;">TACTICAL DIRECTIVES</div>
-                    <div class="cmd-item highlight" style="border-color:var(--milton); color:var(--milton); margin-top:5px;">[am] ASK MILTON (Cost Analysis)</div>
-                    <div class="cmd-grid">
-                        <div class="cmd-item war-highlight">[as] Artillery</div>  <div class="cmd-item">[so] Special Ops</div>
-                        <div class="cmd-item">[bd] Blockade</div>   <div class="cmd-item">[wd] Withdraw</div>
-                        <div class="cmd-item war-highlight" style="grid-column: span 2; margin-top:5px;">[es] ESCALATE (Ground Surge)</div>
-                    </div>
-                `;
+                DOM.cmdList.innerHTML = `<div style="text-align:center; font-weight:bold; padding-bottom:3px; color:var(--danger); opacity:0.8;">TACTICAL DIRECTIVES</div><div class="cmd-item highlight" style="border-color:var(--milton); color:var(--milton); margin-top:5px;">[am] ASK MILTON (Cost Analysis)</div><div class="cmd-grid"><div class="cmd-item war-highlight">[as] Artillery</div>  <div class="cmd-item">[so] Special Ops</div><div class="cmd-item">[bd] Blockade</div>   <div class="cmd-item">[wd] Withdraw</div><div class="cmd-item war-highlight" style="grid-column: span 2; margin-top:5px;">[es] ESCALATE (Ground Surge)</div></div>`;
             }
         }
 
@@ -852,21 +680,11 @@
                 <div style="height:10px; border-bottom: 1px dashed var(--dark); margin-bottom: 10px;"></div>
                 <div class="metric-row hover-term" data-term="approval"><span class="metric-label">DOMESTIC APP:</span><span class="metric-value ${state.approval>=51?'good':(state.approval<40?'warning':'')}">${Math.round(state.approval)}%</span><span class="metric-target">51%</span></div>
             `;
-            DOM.cmdList.innerHTML = `
-                <div style="text-align:center; font-weight:bold; padding-bottom:3px; color:var(--dark); opacity:0.8;">SHADOW DIRECTIVES</div>
-                <div class="cmd-item highlight" style="border-color:var(--milton); color:var(--milton); margin-top:5px;">[am] ASK MILTON (Structural Cost)</div>
-                <div class="cmd-grid">
-                    <div class="cmd-item">[ff] Fear Campaign</div><div class="cmd-item">[ce] Censor Engine</div>
-                    <div class="cmd-item">[sm] Subsidize Media</div><div class="cmd-item">[sl] Strategic Leak</div>
-                    <div class="cmd-item dark-highlight" style="grid-column: span 2; margin-top:5px;">[ex] EXIT OPERATIONS</div>
-                </div>
-            `;
+            DOM.cmdList.innerHTML = `<div style="text-align:center; font-weight:bold; padding-bottom:3px; color:var(--dark); opacity:0.8;">SHADOW DIRECTIVES</div><div class="cmd-item highlight" style="border-color:var(--milton); color:var(--milton); margin-top:5px;">[am] ASK MILTON (Structural Cost)</div><div class="cmd-grid"><div class="cmd-item">[ff] Fear Campaign</div><div class="cmd-item">[ce] Censor Engine</div><div class="cmd-item">[sm] Subsidize Media</div><div class="cmd-item">[sl] Strategic Leak</div><div class="cmd-item dark-highlight" style="grid-column: span 2; margin-top:5px;">[ex] EXIT OPERATIONS</div></div>`;
         }
 
         function renderWhipDashboard() {
-            DOM.telemetry.className = 'panel legislature-mode'; DOM.screen.className = 'crt-screen on legislature-mode';
-            DOM.prompt.textContent = "WHIP:~$";
-            
+            DOM.telemetry.className = 'panel legislature-mode'; DOM.screen.className = 'crt-screen on legislature-mode'; DOM.prompt.textContent = "WHIP:~$";
             DOM.telemetry.innerHTML = `
                 <div class="panel-title" style="color:var(--legislature); border-bottom-color:var(--legislature);">LEGISLATURE WHIP</div>
                 <div class="metric-header" style="border-bottom-color:var(--legislature);"><span class="mh-label">STATUS</span><span class="mh-val">CURRENT</span><span class="mh-tgt">TARGET</span></div>
@@ -875,15 +693,7 @@
                 <div class="metric-row hover-term" data-term="protection"><span class="metric-label">PROT. VOTES:</span><span class="metric-value">${state.whipState.votes.filter(v => v.type === 'protection' && v.status === 'won').length}</span><span class="metric-target">--</span></div>
                 <div class="metric-row hover-term" data-term="compromised"><span class="metric-label">COMPROMISED:</span><span class="metric-value">${state.whipState.votes.filter(v => v.type === 'compromised' && v.status === 'won').length}</span><span class="metric-target">--</span></div>
             `;
-            
-            DOM.cmdList.innerHTML = `
-                <div style="text-align:center; font-weight:bold; padding-bottom:3px; color:var(--legislature); opacity:0.8;">WHIP COMMANDS</div>
-                <div class="cmd-item highlight" style="border-color:var(--milton); color:var(--milton); margin-top:5px;">[am] ASK MILTON (Vote Cost Analysis)</div>
-                <div class="cmd-grid">
-                    <div class="cmd-item whip-highlight">[pork] Allocate $B</div>  <div class="cmd-item">[prot] Tariff Boost</div>
-                    <div class="cmd-item whip-highlight" style="grid-column: span 2;">[compromised] Strategic Leak [sl]</div>
-                </div>
-            `;
+            DOM.cmdList.innerHTML = `<div style="text-align:center; font-weight:bold; padding-bottom:3px; color:var(--legislature); opacity:0.8;">WHIP COMMANDS</div><div class="cmd-item highlight" style="border-color:var(--milton); color:var(--milton); margin-top:5px;">[am] ASK MILTON (Vote Cost Analysis)</div><div class="cmd-grid"><div class="cmd-item whip-highlight">[pork] Allocate $B</div>  <div class="cmd-item">[prot] Tariff Boost</div><div class="cmd-item whip-highlight" style="grid-column: span 2;">[compromised] Strategic Leak [sl]</div></div>`;
         }
 
         function updateDashboard() { 
@@ -893,374 +703,169 @@
             else renderMacroDashboard(); 
         }
 
-        // --- DONOR INTERCEPT LOGIC ---
         function triggerDonorInterceptUI() {
             state.donorIntercept.active = true;
-            
             const availableDeals = donorDeals.filter(deal => deal.condition());
-            if (availableDeals.length === 0) {
-                print("SYSTEM: Signal lost. Intercept failed.", 'danger');
-                enableInput();
-                return;
-            }
+            if (availableDeals.length === 0) { print("SYSTEM: Signal lost. Intercept failed.", 'danger'); enableInput(); return; }
             
             const deal = availableDeals[Math.floor(Math.random() * availableDeals.length)];
-            state.donorIntercept.deal = deal;
-            state.donorIntercept.pendingDecision = true;
-            
+            state.donorIntercept.deal = deal; state.donorIntercept.pendingDecision = true;
             playDonorCall();
             
             DOM.donorContent.innerHTML = `
-                <p style="font-size:20px; line-height:1.4;">
-                    "Mr. President, we've reviewed your policy package. If you pass [${deal.dealName}] now, 
-                    I can promise a $50M SuperPAC boost instantly. Approval +10%."
-                </p>
+                <p style="font-size:20px; line-height:1.4;">"Mr. President, we've reviewed your policy package. If you pass [${deal.dealName}] now, I can promise a $50M SuperPAC boost instantly. Approval +10%."</p>
                 <p style="font-size:24px; margin-top:30px; color:var(--good);">PROPOSED DEAL:</p>
-                <ul style="text-align:left; font-size:20px; margin:20px 0;">
-                    <li>Policy Action Required: ${deal.dealName}</li>
-                    <li>Incentive: +10 Approval, $50M SuperPAC Boost</li>
-                </ul>
+                <ul style="text-align:left; font-size:20px; margin:20px 0;"><li>Policy Action Required: ${deal.dealName}</li><li>Incentive: +10 Approval, $50M SuperPAC Boost</li></ul>
                 <p style="color:var(--dim); margin-top: 20px; font-weight:bold;">Type [accept] or [reject]</p>
             `;
             
-            DOM.donorOverlay.style.display = 'flex';
-            disableInput();
-            enableDonorInput();
+            disableInput(); // FIX: Shut down terminal focus mapping first
+            DOM.donorOverlay.style.display = 'flex'; // THEN render the overlay
+            enableDonorInput(); // THEN focus the sub-module input
         }
 
         function processDonorDecision(decision) {
             if (!state.donorIntercept.pendingDecision || !state.donorIntercept.deal) return;
-            
-            const deal = state.donorIntercept.deal;
-            DOM.donorOverlay.style.display = 'none';
-            state.donorIntercept.active = false;
-            state.donorIntercept.pendingDecision = false;
+            const deal = state.donorIntercept.deal; DOM.donorOverlay.style.display = 'none'; state.donorIntercept.active = false; state.donorIntercept.pendingDecision = false;
             
             if (decision === 'accept') {
-                print(`[DONOR] ${deal.donor} INTERCEPT: DEAL ACCEPTED`, 'dark');
-                deal.effect();
-                queueNews(`[${deal.donor}] SuperPAC donations flow in after policy concession.`, 0);
-                
-                if (state.sigintState.rawIntel) {
-                    print(deal.miltonCommentary, 'milton'); 
-                } else {
-                    print("MILTON: You just made a deal with the devil. The long-term costs will hit harder than you know.", 'milton');
-                }
+                print(`[DONOR] ${deal.donor} INTERCEPT: DEAL ACCEPTED`, 'dark'); deal.effect(); queueNews(`[${deal.donor}] SuperPAC donations flow in after policy concession.`, 0);
+                if (state.sigintState.rawIntel) print(deal.miltonCommentary, 'milton'); else print("MILTON: You just made a deal with the devil. The long-term costs will hit harder than you know.", 'milton');
             } else {
-                print(`[DONOR] ${deal.donor} INTERCEPT: DEAL REJECTED`, 'system');
-                queueNews(`[${deal.donor}] Donors furious after policy refusal. Campaign coffers dry up.`, 2);
-                state.approval -= 3;
+                print(`[DONOR] ${deal.donor} INTERCEPT: DEAL REJECTED`, 'system'); queueNews(`[${deal.donor}] Donors furious after policy refusal. Campaign coffers dry up.`, 2); state.approval -= 3;
             }
-            
-            updateDashboard();
-            enableInput();
+            updateDashboard(); enableInput();
         }
 
         function triggerRandomDonorEvent() {
             if (state.donorIntercept.active || state.pendingEvent || state.activeScenario) return;
-            if (Math.random() < 0.25) {
-                state.pendingEvent = 'donor';
-                print("\nSYSTEM: INCOMING HIGH PRIORITY TRANSMISSION FROM MEGA-DONOR. Type [dnr] to authorize the connection.", 'dark');
-            }
+            if (Math.random() < 0.25) { state.pendingEvent = 'donor'; print("\nSYSTEM: INCOMING HIGH PRIORITY TRANSMISSION FROM MEGA-DONOR. Type [dnr] to authorize the connection.", 'dark'); }
         }
 
-        // --- SIGINT PUZZLE IMPLEMENTATION ---
         function triggerRandomSigintEvent() {
             if (state.sigintState.active || state.mode !== 'macro' || state.pendingEvent || state.activeScenario) return;
-            if (Math.random() < 0.2) {
-                state.pendingEvent = 'sigint';
-                print("\nSYSTEM: ENCRYPTED HOSTILE COMMUNICATIONS INTERCEPTED. Type [si] to attempt decryption module.", 'danger');
-            }
+            if (Math.random() < 0.2) { state.pendingEvent = 'sigint'; print("\nSYSTEM: ENCRYPTED HOSTILE COMMUNICATIONS INTERCEPTED. Type [si] to attempt decryption module.", 'danger'); }
         }
 
         function startSigintGame() {
-            state.sigintState.active = true;
-            state.sigintState.currentLevel = 1;
-            state.sigintState.maxLevels = 3;
-            state.sigintState.playerSequence = [];
-            
-            DOM.briefingMode.style.display = 'none';
-            DOM.dash.style.visibility = 'visible';
-            DOM.sigintMode.style.display = 'flex';
-            
-            generateSigintPattern();
-            
-            print("SIGINT DECRYPTION INITIALIZED: Match the frequency pattern to decrypt enemy comms.", 'whip');
-            enableSigintInput();
+            state.sigintState.active = true; state.sigintState.currentLevel = 1; state.sigintState.maxLevels = 3; state.sigintState.playerSequence = [];
+            disableInput(); // Safety wipe
+            DOM.briefingMode.style.display = 'none'; DOM.dash.style.visibility = 'visible'; DOM.sigintMode.style.display = 'flex';
+            generateSigintPattern(); print("SIGINT DECRYPTION INITIALIZED: Match the frequency pattern to decrypt enemy comms.", 'whip'); enableSigintInput();
         }
 
         function generateSigintPattern() {
-            const length = 4 + state.sigintState.currentLevel * 2;
-            const sequence = [];
-            
-            for (let i = 0; i < length; i++) {
-                sequence.push(Math.floor(Math.random() * 16));
-            }
-            
+            const length = 4 + state.sigintState.currentLevel * 2; const sequence = [];
+            for (let i = 0; i < length; i++) sequence.push(Math.floor(Math.random() * 16));
             state.sigintState.targetSequence = sequence;
-            
-            let display = '';
-            sequence.forEach(val => {
-                display += String.fromCharCode(65 + (val % 26)) + ' ';
-            });
-            
-            DOM.targetPattern.textContent = `PATTERN: ${display.trim()}`;
-            renderSigintGrid(length);
+            let display = ''; sequence.forEach(val => { display += String.fromCharCode(65 + (val % 26)) + ' '; });
+            DOM.targetPattern.textContent = `PATTERN: ${display.trim()}`; renderSigintGrid(length);
         }
 
         function renderSigintGrid(length) {
-            DOM.sigintCanvas.width = 400;
-            DOM.sigintCanvas.height = 250;
-            const ctx = DOM.sigintCanvas.getContext('2d');
-            
-            const gridSize = Math.ceil(Math.sqrt(length));
-            const cellSize = 30;
-            const gap = 10;
-            const startX = (DOM.sigintCanvas.width - (gridSize * (cellSize + gap))) / 2;
-            const startY = (DOM.sigintCanvas.height - (gridSize * (cellSize + gap))) / 2;
-            
+            DOM.sigintCanvas.width = 400; DOM.sigintCanvas.height = 250; const ctx = DOM.sigintCanvas.getContext('2d');
+            const gridSize = Math.ceil(Math.sqrt(length)); const cellSize = 30; const gap = 10;
+            const startX = (DOM.sigintCanvas.width - (gridSize * (cellSize + gap))) / 2; const startY = (DOM.sigintCanvas.height - (gridSize * (cellSize + gap))) / 2;
             ctx.clearRect(0, 0, DOM.sigintCanvas.width, DOM.sigintCanvas.height);
-            
             for (let i = 0; i < length; i++) {
-                const row = Math.floor(i / gridSize);
-                const col = i % gridSize;
-                const x = startX + col * (cellSize + gap);
-                const y = startY + row * (cellSize + gap);
-                
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-                ctx.fillRect(x, y, cellSize, cellSize);
-                ctx.strokeStyle = '#00aaff';
-                ctx.strokeRect(x, y, cellSize, cellSize);
+                const row = Math.floor(i / gridSize); const col = i % gridSize; const x = startX + col * (cellSize + gap); const y = startY + row * (cellSize + gap);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; ctx.fillRect(x, y, cellSize, cellSize); ctx.strokeStyle = '#00aaff'; ctx.strokeRect(x, y, cellSize, cellSize);
             }
         }
 
         function processSigintCommand(cmd) {
-            if (cmd === 'skip' || cmd === 'abort') {
-                endSigintGame(false);
-                return;
-            }
-            
-            const input = cmd.toUpperCase();
-            let success = true;
-            
+            if (cmd === 'skip' || cmd === 'abort') { endSigintGame(false); return; }
+            const input = cmd.toUpperCase(); let success = true;
             for (let i = 0; i < state.sigintState.targetSequence.length; i++) {
                 if (i >= input.length) { success = false; break; }
-                const inputVal = input.charCodeAt(i) - 65;
-                if (inputVal !== state.sigintState.targetSequence[i]) { success = false; }
+                const inputVal = input.charCodeAt(i) - 65; if (inputVal !== state.sigintState.targetSequence[i]) success = false; 
             }
-            
             if (success) {
-                playWhipSuccess();
-                print(`SIGINT SUCCESS: Decryption level ${state.sigintState.currentLevel} complete.`, 'whip');
-                state.sigintState.currentLevel++;
-                
-                if (state.sigintState.currentLevel > state.sigintState.maxLevels) {
-                    endSigintGame(true);
-                } else {
-                    generateSigintPattern();
-                    enableSigintInput();
-                }
+                playWhipSuccess(); print(`SIGINT SUCCESS: Decryption level ${state.sigintState.currentLevel} complete.`, 'whip'); state.sigintState.currentLevel++;
+                if (state.sigintState.currentLevel > state.sigintState.maxLevels) endSigintGame(true); else { generateSigintPattern(); enableSigintInput(); }
             } else {
-                playWhipFail();
-                print("SIGINT FAILURE: Decryption error. Pattern mismatch.", 'danger');
-                
-                if (Math.random() > 0.5) {
-                    setTimeout(() => {
-                        print("SYSTEM: Retrying decryption...", 'system');
-                        enableSigintInput();
-                    }, 1000);
-                } else {
-                    endSigintGame(false);
-                }
+                playWhipFail(); print("SIGINT FAILURE: Decryption error. Pattern mismatch.", 'danger');
+                if (Math.random() > 0.5) { setTimeout(() => { print("SYSTEM: Retrying decryption...", 'system'); enableSigintInput(); }, 1000); } 
+                else endSigintGame(false);
             }
         }
 
         function endSigintGame(success) {
-            state.sigintState.active = false;
-            DOM.sigintMode.style.display = 'none';
-            
+            state.sigintState.active = false; DOM.sigintMode.style.display = 'none';
             if (success) {
-                print("SIGINT SUCCESS: Full decryption complete. Raw Intel acquired.", 'whip');
-                state.sigintState.rawIntel = true;
-                
+                print("SIGINT SUCCESS: Full decryption complete. Raw Intel acquired.", 'whip'); state.sigintState.rawIntel = true;
                 print("MILTON: I've decrypted the economic models. Here's what your options really cost:", 'milton');
-                if (state.currentCrisis) {
-                    print(`In this ${state.currentCrisis} scenario, [rr] reduces inflation by 0.8% but costs you 2 approval points. The political math favors [cr].`, 'milton');
-                }
+                if (state.currentCrisis) print(`In this ${state.currentCrisis} scenario, [rr] reduces inflation by 0.8% but costs you 2 approval points. The political math favors [cr].`, 'milton');
             } else {
-                print("SIGINT FAILURE: Decryption incomplete. Operating on garbage intel.", 'danger');
-                state.sigintState.rawIntel = false;
+                print("SIGINT FAILURE: Decryption incomplete. Operating on garbage intel.", 'danger'); state.sigintState.rawIntel = false;
                 print("MILTON: With incomplete intelligence, you're making decisions blind. Expect 50% less effective outcomes.", 'milton');
             }
-            
-            updateDashboard();
-            enableInput();
+            updateDashboard(); enableInput();
         }
 
-        // --- WHIP MODULE IMPLEMENTATION ---
         function triggerRandomWhipEvent(policyType) {
             if (state.whipState.active || state.mode !== 'macro' || state.pendingEvent || state.activeScenario) return;
-            const omnibusPolicies = ['ms', 'is', 'tx'];
-            if (!omnibusPolicies.includes(policyType)) return;
-            
-            state.pendingEvent = 'whip';
-            print("\nSYSTEM: MAJOR LEGISLATION PROPOSED. Type [wh] to deploy the Legislature Whip module and secure votes.", 'whip');
+            const omnibusPolicies = ['ms', 'is', 'tx']; if (!omnibusPolicies.includes(policyType)) return;
+            state.pendingEvent = 'whip'; print("\nSYSTEM: MAJOR LEGISLATION PROPOSED. Type [wh] to deploy the Legislature Whip module and secure votes.", 'whip');
         }
 
         function startWhipModule() {
-            state.whipState.active = true;
-            state.whipState.votesWon = 0;
-            state.whipState.votesNeeded = Math.floor(Math.random() * 5) + 13; 
+            state.whipState.active = true; state.whipState.votesWon = 0; state.whipState.votesNeeded = Math.floor(Math.random() * 5) + 13; 
             state.whipState.votes.forEach(vote => { vote.status = 'pending'; });
-            
-            DOM.briefingMode.style.display = 'none'; 
-            DOM.dash.style.visibility = 'visible'; 
-            DOM.whipMode.style.display = 'flex';
-            
-            renderWhipDashboard();
-            updateWhipStatus();
-            print("WHIP MODULE INITIALIZED: You must whip 20 votes to pass your omnibus package.", 'whip');
-            enableWhipInput();
+            disableInput(); // Safety wipe
+            DOM.briefingMode.style.display = 'none'; DOM.dash.style.visibility = 'visible'; DOM.whipMode.style.display = 'flex';
+            renderWhipDashboard(); updateWhipStatus(); print("WHIP MODULE INITIALIZED: You must whip 20 votes to pass your omnibus package.", 'whip'); enableWhipInput();
         }
 
         function processWhipCommand(cmd) {
             if (cmd === 'pork') {
-                let count = 0;
-                state.whipState.votes.forEach(vote => {
-                    if (vote.status === 'pending' && vote.type === 'pork') {
-                        vote.status = 'won'; count++;
-                    }
-                });
-                
-                if (count > 0) {
-                    playWhipSuccess();
-                    print(`WHIP SUCCESS: Allocated $${count * 1.5}B in pork spending. ${count} votes won.`, 'whip');
-                    state.gdp += count * 0.2;
-                    state.inflation += count * 0.3;
-                } else {
-                    playWhipFail();
-                    print("WHIP FAILURE: No pork-eligible votes remaining.", 'danger');
-                }
+                let count = 0; state.whipState.votes.forEach(v => { if (v.status === 'pending' && v.type === 'pork') { v.status = 'won'; count++; }});
+                if (count > 0) { playWhipSuccess(); print(`WHIP SUCCESS: Allocated $${count * 1.5}B in pork spending. ${count} votes won.`, 'whip'); state.gdp += count * 0.2; state.inflation += count * 0.3; } 
+                else { playWhipFail(); print("WHIP FAILURE: No pork-eligible votes remaining.", 'danger'); }
             } 
             else if (cmd === 'prot' || cmd === 'tariffs') {
-                let count = 0;
-                state.whipState.votes.forEach(vote => {
-                    if (vote.status === 'pending' && vote.type === 'protection') {
-                        vote.status = 'won'; count++;
-                    }
-                });
-                
-                if (count > 0) {
-                    playWhipSuccess();
-                    print(`WHIP SUCCESS: Raised tariffs ${count * 1.5}% for protectionist votes. ${count} votes won.`, 'whip');
-                    state.tariffRate += count * 1.5;
-                } else {
-                    playWhipFail();
-                    print("WHIP FAILURE: No protection-eligible votes remaining.", 'danger');
-                }
+                let count = 0; state.whipState.votes.forEach(v => { if (v.status === 'pending' && v.type === 'protection') { v.status = 'won'; count++; }});
+                if (count > 0) { playWhipSuccess(); print(`WHIP SUCCESS: Raised tariffs ${count * 1.5}% for protectionist votes. ${count} votes won.`, 'whip'); state.tariffRate += count * 1.5; } 
+                else { playWhipFail(); print("WHIP FAILURE: No protection-eligible votes remaining.", 'danger'); }
             }
             else if (cmd === 'compromised' || cmd === 'sl') {
-                let count = 0;
-                state.whipState.votes.forEach(vote => {
-                    if (vote.status === 'pending' && vote.type === 'compromised') {
-                        vote.status = 'won'; count++;
-                    }
-                });
-                
-                if (count > 0) {
-                    playWhipSuccess();
-                    print(`WHIP SUCCESS: Strategic leaks compromised ${count} votes. ${count} votes won.`, 'whip');
-                    state.dark.narrative -= count * 5;
-                    state.dark.paranoia += count * 3;
-                    state.approval += count;
-                } else {
-                    playWhipFail();
-                    print("WHIP FAILURE: No compromised-eligible votes remaining.", 'danger');
-                }
+                let count = 0; state.whipState.votes.forEach(v => { if (v.status === 'pending' && v.type === 'compromised') { v.status = 'won'; count++; }});
+                if (count > 0) { playWhipSuccess(); print(`WHIP SUCCESS: Strategic leaks compromised ${count} votes. ${count} votes won.`, 'whip'); state.dark.narrative -= count * 5; state.dark.paranoia += count * 3; state.approval += count; } 
+                else { playWhipFail(); print("WHIP FAILURE: No compromised-eligible votes remaining.", 'danger'); }
             }
-            else if (cmd === 'skip' || cmd === 'pass') {
-                endWhipModule(false);
-                return;
-            }
+            else if (cmd === 'skip' || cmd === 'pass') { endWhipModule(false); return; }
             
             updateWhipStatus();
-            
-            if (state.whipState.votesWon >= state.whipState.votesNeeded) {
-                setTimeout(() => {
-                    print("WHIP SUCCESS: Package passed with majority support.", 'whip');
-                    endWhipModule(true);
-                }, 1000);
-            } else if (state.turn > state.maxTurns / 2 && state.whipState.votesWon < 5) {
-                setTimeout(() => {
-                    print("WHIP FAILURE: Package failed due to lack of support.", 'whip');
-                    state.approval -= 15;
-                    endWhipModule(false);
-                }, 1000);
-            } else {
-                enableWhipInput();
-            }
+            if (state.whipState.votesWon >= state.whipState.votesNeeded) { setTimeout(() => { print("WHIP SUCCESS: Package passed with majority support.", 'whip'); endWhipModule(true); }, 1000); } 
+            else if (state.turn > state.maxTurns / 2 && state.whipState.votesWon < 5) { setTimeout(() => { print("WHIP FAILURE: Package failed due to lack of support.", 'whip'); state.approval -= 15; endWhipModule(false); }, 1000); } 
+            else enableWhipInput();
         }
 
         function updateWhipStatus() {
             let won = 0, pending = 0, lost = 0;
-            state.whipState.votes.forEach(vote => {
-                if (vote.status === 'won') won++;
-                else if (vote.status === 'pending') pending++;
-                else lost++;
-            });
-            
-            state.whipState.votesWon = won;
-            DOM.whipStatus.textContent = `Won: ${won}/${state.whipState.votesNeeded} | Pending: ${pending}`;
-            
+            state.whipState.votes.forEach(v => { if (v.status === 'won') won++; else if (v.status === 'pending') pending++; else lost++; });
+            state.whipState.votesWon = won; DOM.whipStatus.textContent = `Won: ${won}/${state.whipState.votesNeeded} | Pending: ${pending}`;
             DOM.whipGrid.innerHTML = '';
-            state.whipState.votes.forEach(vote => {
-                const div = document.createElement('div');
-                div.className = `whip-vote vote-${vote.status}`;
-                
-                let typeClass = 'vote-pending';
-                if (vote.type === 'pork') typeClass = 'vote-pork';
-                else if (vote.type === 'protection') typeClass = 'vote-protection';
-                else if (vote.type === 'compromised') typeClass = 'vote-compromised';
-                
-                div.innerHTML = `
-                    <div class="vote-type ${typeClass}">${vote.type}</div>
-                    <div>VOTE #${vote.id}</div>
-                    <div style="font-size:12px; margin-top:5px;">
-                        ${vote.status === 'won' ? '✓ WON' : (vote.status === 'pending' ? '? PENDING' : '✗ LOST')}
-                    </div>
-                `;
+            state.whipState.votes.forEach(v => {
+                const div = document.createElement('div'); div.className = `whip-vote vote-${v.status}`;
+                let typeClass = v.type === 'pork' ? 'vote-pork' : (v.type === 'protection' ? 'vote-protection' : 'vote-compromised');
+                div.innerHTML = `<div class="vote-type ${typeClass}">${v.type}</div><div>VOTE #${v.id}</div><div style="font-size:12px; margin-top:5px;">${v.status === 'won' ? '✓ WON' : (v.status === 'pending' ? '? PENDING' : '✗ LOST')}</div>`;
                 DOM.whipGrid.appendChild(div);
             });
-            
-            if (state.whipState.votesWon >= state.whipState.votesNeeded) {
-                DOM.whipNotes.textContent = "Package secured. Ready for final vote.";
-                DOM.whipNotes.style.color = 'var(--good)';
-            } else if (state.whipState.votesWon < 5) {
-                DOM.whipNotes.textContent = "CRITICAL: You need more votes to pass the package!";
-                DOM.whipNotes.style.color = 'var(--danger)';
-            }
+            if (state.whipState.votesWon >= state.whipState.votesNeeded) { DOM.whipNotes.textContent = "Package secured. Ready for final vote."; DOM.whipNotes.style.color = 'var(--good)'; } 
+            else if (state.whipState.votesWon < 5) { DOM.whipNotes.textContent = "CRITICAL: You need more votes to pass the package!"; DOM.whipNotes.style.color = 'var(--danger)'; }
         }
 
         function endWhipModule(success) {
-            state.whipState.active = false;
-            DOM.whipMode.style.display = 'none';
-            
-            if (success) print("WHIP SUCCESS: Package passed! Proceeding to final vote.", 'whip');
-            else print("WHIP FAILURE: Package failed. Political capital depleted.", 'danger');
-            
-            updateDashboard();
-            enableInput();
+            state.whipState.active = false; DOM.whipMode.style.display = 'none';
+            if (success) print("WHIP SUCCESS: Package passed! Proceeding to final vote.", 'whip'); else print("WHIP FAILURE: Package failed. Political capital depleted.", 'danger');
+            updateDashboard(); enableInput();
         }
 
-        // --- STATE MANAGEMENT & HISTORICAL AAR ---
         function randomizeStart() {
-            state.gdp = parseFloat((Math.random() * 4 - 1).toFixed(1)); 
-            state.inflation = parseFloat((Math.random() * 6 + 1).toFixed(1)); 
-            state.unemployment = parseFloat((Math.random() * 5 + 3).toFixed(1)); 
-            state.sp500 = Math.floor(Math.random() * 2000 + 3500); 
-            state.approval = Math.floor(Math.random() * 20 + 40); 
-            state.warTurnTrigger = Math.floor(Math.random() * 6) + 3; 
-            
+            state.gdp = parseFloat((Math.random() * 4 - 1).toFixed(1)); state.inflation = parseFloat((Math.random() * 6 + 1).toFixed(1)); 
+            state.unemployment = parseFloat((Math.random() * 5 + 3).toFixed(1)); state.sp500 = Math.floor(Math.random() * 2000 + 3500); 
+            state.approval = Math.floor(Math.random() * 20 + 40); state.warTurnTrigger = Math.floor(Math.random() * 6) + 3; 
             print("SYSTEM: DEBT CEILING AT 95% CAPACITY. URGENCY LEVEL: CRITICAL.", 'danger');
         }
 
@@ -1273,69 +878,38 @@
                     { type: 'labor', msg: "[SHOCK] Historic port strike freezes national supply chain.", eff: () => { state.inflation += 0.8; state.unemployment += 0.5; } }
                 ];
                 let shock = shocks[Math.floor(Math.random() * shocks.length)];
-                playBell(true); print(shock.msg, 'danger'); queueNews(shock.msg, 0);
-                shock.eff();
+                playBell(true); print(shock.msg, 'danger'); queueNews(shock.msg, 0); shock.eff();
             }
         }
 
         function togglePower() {
             if (state.isOn) {
                 state.isOn = false; DOM.pLed.classList.remove('on'); DOM.screen.className = 'crt-screen'; 
-                DOM.inputLine.style.display = 'none'; DOM.tickerBar.style.visibility = 'hidden'; DOM.canvas.style.display = 'none';
+                disableInput(); DOM.tickerBar.style.visibility = 'hidden'; DOM.canvas.style.display = 'none';
                 stopHum(); return;
             }
             state.isOn = true; if(state.soundEnabled) { initAudio(); playHum(); } playThump();
             DOM.pLed.classList.add('on'); DOM.screen.className = 'crt-screen on'; DOM.tickerBar.style.visibility = 'visible';
-            
             randomizeStart();
-
-            setTimeout(() => {
-                print("SYSTEM MILTON BOOT... OK"); 
-                print("AUTHORIZATION: POTUS... CONFIRMED");
-                DOM.briefingMode.style.display = 'flex';
-                enableBriefingInput();
-            }, 800);
+            setTimeout(() => { print("SYSTEM MILTON BOOT... OK"); print("AUTHORIZATION: POTUS... CONFIRMED"); DOM.briefingMode.style.display = 'flex'; enableBriefingInput(); }, 800);
         }
 
         function processBootCommand(rawVal) {
-            if (rawVal === '1929' || rawVal === '1980') {
-                loadHistoricalScenario(rawVal);
-                return;
-            }
+            if (rawVal === '1929' || rawVal === '1980') { loadHistoricalScenario(rawVal); return; }
             if (rawVal === 'play') {
-                DOM.briefingMode.style.display = 'none';
-                DOM.dash.style.visibility = 'visible'; 
-                processTicker(); updateDashboard();
-                print("SYSTEM: INITIALIZING STANDARD SANDBOX ENVIRONMENT.", 'user-echo');
-                setTimeout(() => { runTurn(); }, 500);
-                return;
+                DOM.briefingMode.style.display = 'none'; DOM.dash.style.visibility = 'visible'; processTicker(); updateDashboard();
+                print("SYSTEM: INITIALIZING STANDARD SANDBOX ENVIRONMENT.", 'user-echo'); setTimeout(() => { runTurn(); }, 500); return;
             }
-            
-            print("SYSTEM: Unrecognized boot directive. Type 'play', '1929', or '1980'.", 'danger');
-            enableBriefingInput();
+            print("SYSTEM: Unrecognized boot directive. Type 'play', '1929', or '1980'.", 'danger'); enableBriefingInput();
         }
 
         function loadHistoricalScenario(id) {
-            const scenario = historicalScenarios[id];
-            state.activeScenario = scenario;
-            state.maxTurns = scenario.duration;
-            
-            state.gdp = scenario.start.gdp;
-            state.unemployment = scenario.start.unemployment;
-            state.inflation = scenario.start.inflation;
-            state.sp500 = scenario.start.sp500;
-            state.intRate = scenario.start.intRate;
-            state.tariffRate = scenario.start.tariffRate;
-            state.approval = scenario.start.approval;
-
-            DOM.briefingMode.style.display = 'none';
-            DOM.dash.style.visibility = 'visible'; 
-            
-            print(`\nSYSTEM: INITIALIZING HISTORICAL ENVIRONMENT: ${scenario.name}`, 'whip');
-            print(`MILTON: You are overriding the ${scenario.admin}. The structural math is identical to reality. Let's see if you can beat the history books.`, 'milton');
-            
-            updateDashboard();
-            setTimeout(runTurn, 1000);
+            const scenario = historicalScenarios[id]; state.activeScenario = scenario; state.maxTurns = scenario.duration;
+            state.gdp = scenario.start.gdp; state.unemployment = scenario.start.unemployment; state.inflation = scenario.start.inflation;
+            state.sp500 = scenario.start.sp500; state.intRate = scenario.start.intRate; state.tariffRate = scenario.start.tariffRate; state.approval = scenario.start.approval;
+            DOM.briefingMode.style.display = 'none'; DOM.dash.style.visibility = 'visible'; 
+            print(`\nSYSTEM: INITIALIZING HISTORICAL ENVIRONMENT: ${scenario.name}`, 'whip'); print(`MILTON: You are overriding the ${scenario.admin}. The structural math is identical to reality. Let's see if you can beat the history books.`, 'milton');
+            updateDashboard(); setTimeout(runTurn, 1000);
         }
 
         function triggerWarMode() {
@@ -1351,413 +925,209 @@
         }
 
         function endWar(victory) {
-            state.mode = 'macro'; state.subMode = null; 
-            
-            if (artLoopId) { cancelAnimationFrame(artLoopId); artLoopId = null; }
-            DOM.canvas.style.display = 'none';
-
+            state.mode = 'macro'; state.subMode = null; if (artLoopId) { cancelAnimationFrame(artLoopId); artLoopId = null; } DOM.canvas.style.display = 'none';
             print("\nTHEATER COMMAND DISENGAGED. Total Expenditure: $"+state.war.expenditure+" Billion.", 'system');
-            if (victory) { 
-                print("GENERAL: Enemy surrender confirmed. Total victory.", 'general'); 
-                state.approval += 25; 
-                queueNews("[GLOBAL] Hostilities conclude with decisive American victory.", 0); 
-            } else { 
-                print("GENERAL: Withdrawal complete. We are tucking tail.", 'general'); 
-                state.approval -= 20; 
-                queueNews("[GLOBAL] Forces withdraw. Administration facing harsh criticism.", 0); 
-            }
-            
+            if (victory) { print("GENERAL: Enemy surrender confirmed. Total victory.", 'general'); state.approval += 25; queueNews("[GLOBAL] Hostilities conclude with decisive American victory.", 0); } 
+            else { print("GENERAL: Withdrawal complete. We are tucking tail.", 'general'); state.approval -= 20; queueNews("[GLOBAL] Forces withdraw. Administration facing harsh criticism.", 0); }
             print(`MILTON: The war is over. Time to pay the bill. This deficit spending will now hit the macro economy.`, 'milton');
-            let infHit = (state.war.expenditure / 10); let gdpHit = (state.war.expenditure / 20);
-            state.inflation += infHit; state.gdp -= gdpHit;
-            
+            let infHit = (state.war.expenditure / 10); let gdpHit = (state.war.expenditure / 20); state.inflation += infHit; state.gdp -= gdpHit;
             updateDashboard(); processTicker(); setTimeout(advanceTimeline, 1000);
         }
 
         function endDarkOps() {
             state.mode = 'macro'; print("\nSHADOW PROTOCOLS DISENGAGED.", 'system');
             print("MILTON: Welcome back to reality, Mr. President. I hope the manipulation was worth the institutional decay. The market will now react to your fractured societal trust.", 'milton');
-            if (state.dark.paranoia > 70) { 
-                state.gdp -= 2.0; 
-                print("SYSTEM: High public paranoia severely hampering economic investment.", 'danger'); 
-                queueNews("[MARKETS] Investment stalls amid unprecedented civil paranoia.", 0); 
-            }
-            if (state.dark.trust < 40) { 
-                state.fedCredibility -= 20; 
-                state.congress -= 15; 
-                print("SYSTEM: Institutional collapse eroding Federal credibility.", 'danger'); 
-                queueNews("[ECONOMY] Global faith in US institutions faltering.", 0); 
-            }
+            if (state.dark.paranoia > 70) { state.gdp -= 2.0; print("SYSTEM: High public paranoia severely hampering economic investment.", 'danger'); queueNews("[MARKETS] Investment stalls amid unprecedented civil paranoia.", 0); }
+            if (state.dark.trust < 40) { state.fedCredibility -= 20; state.congress -= 15; print("SYSTEM: Institutional collapse eroding Federal credibility.", 'danger'); queueNews("[ECONOMY] Global faith in US institutions faltering.", 0); }
             updateDashboard(); processTicker(); setTimeout(advanceTimeline, 1000);
         }
 
         function determineCrisis() {
             if (state.activeScenario) return 'stable'; 
-            if (state.turn === state.warTurnTrigger) return 'geopolitical'; 
-            if (state.inflation > 4.5) return 'inflation';
-            if (state.unemployment > 6.0) return 'unemployment';
-            if (state.sp500 < 4500) return 'market_crash';
-            if (state.approval < 45) return 'approval_drop';
-            return 'stable';
+            if (state.turn === state.warTurnTrigger) return 'geopolitical'; if (state.inflation > 4.5) return 'inflation';
+            if (state.unemployment > 6.0) return 'unemployment'; if (state.sp500 < 4500) return 'market_crash';
+            if (state.approval < 45) return 'approval_drop'; return 'stable';
         }
 
         function runTurn() {
             if (state.mode !== 'macro') return; 
+            if (state.activeScenario && state.activeScenario.shocks[state.turn]) { const shock = state.activeScenario.shocks[state.turn]; playBell(true); print(shock.msg, 'danger'); queueNews(shock.msg, 0); shock.eff(); } 
+            else if (!state.activeScenario) { applyRandomShock(); }
+            triggerRandomDonorEvent(); triggerRandomSigintEvent(); 
+            state.miltonAskedThisTurn = false; state.currentCrisis = determineCrisis();
+            updateDashboard(); print("\n--------------------------------------------------");
             
-            if (state.activeScenario && state.activeScenario.shocks[state.turn]) {
-                const shock = state.activeScenario.shocks[state.turn];
-                playBell(true); 
-                print(shock.msg, 'danger'); 
-                queueNews(shock.msg, 0);
-                shock.eff();
-            } else if (!state.activeScenario) {
-                applyRandomShock();
-            }
-
-            triggerRandomDonorEvent();
-            triggerRandomSigintEvent(); 
-
-            state.miltonAskedThisTurn = false; 
-            state.currentCrisis = determineCrisis();
-            
-            updateDashboard(); 
-            print("\n--------------------------------------------------");
-            
-            if (state.currentCrisis === 'geopolitical' && !state.activeScenario) { 
-                playBell(false); 
-                print("SYSTEM: GLOBAL OIL SHOCK. STRAIT OF HORMUZ BLOCKADED.", 'danger'); 
-                queueNews("[BREAKING] Strait of Hormuz blocked. Energy markets in panic.", 0); 
-                processTicker(); 
-            }
-            
-            if (!state.activeScenario) {
-                let chiefAdvice = crisisProfiles[state.currentCrisis].chief;
-                let miltonAnalysis = crisisProfiles[state.currentCrisis].milton;
-                if (state.sigintState.rawIntel) print(miltonAnalysis, 'milton');
-                else print(chiefAdvice, 'chief');
-            } else {
-                print(`SYSTEM: Q${state.turn} ${state.activeScenario.name} Environment Stable. Awaiting Directive.`, 'system');
-            }
-            
+            if (state.currentCrisis === 'geopolitical' && !state.activeScenario) { playBell(false); print("SYSTEM: GLOBAL OIL SHOCK. STRAIT OF HORMUZ BLOCKADED.", 'danger'); queueNews("[BREAKING] Strait of Hormuz blocked. Energy markets in panic.", 0); processTicker(); }
+            if (!state.activeScenario) { let chiefAdvice = crisisProfiles[state.currentCrisis].chief; let miltonAnalysis = crisisProfiles[state.currentCrisis].milton; if (state.sigintState.rawIntel) print(miltonAnalysis, 'milton'); else print(chiefAdvice, 'chief'); } 
+            else { print(`SYSTEM: Q${state.turn} ${state.activeScenario.name} Environment Stable. Awaiting Directive.`, 'system'); }
             enableInput();
         }
 
         function renderHistoricalAAR() {
-            DOM.dash.style.visibility = 'hidden';
-            DOM.inputLine.style.display = 'none';
-            
-            const scenario = state.activeScenario;
-            const playerWin = state.approval >= 50 && state.gdp > 0 && state.inflation < 5.0;
-            
+            disableInput(); DOM.dash.style.visibility = 'hidden'; const scenario = state.activeScenario; const playerWin = state.approval >= 50 && state.gdp > 0 && state.inflation < 5.0;
             DOM.screen.innerHTML = `
                 <div style="padding: 40px; width: 100%; height: 100%; overflow-y: auto; background: #050505;">
-                    <h1 style="color:var(--phosphor); border-bottom: 2px solid var(--dim); padding-bottom: 10px;">
-                        AFTER ACTION REPORT: ${scenario.name}
-                    </h1>
-                    
+                    <h1 style="color:var(--phosphor); border-bottom: 2px solid var(--dim); padding-bottom: 10px;">AFTER ACTION REPORT: ${scenario.name}</h1>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px;">
                         <div style="border: 1px solid var(--war); padding: 20px; background: rgba(255, 68, 68, 0.05);">
-                            <h2 style="color:var(--war); margin-bottom: 15px;">FACTUAL BASELINE</h2>
-                            <p style="color:#aaa; font-size: 18px; line-height: 1.4;"><strong>ADMIN:</strong> ${scenario.admin}</p>
+                            <h2 style="color:var(--war); margin-bottom: 15px;">FACTUAL BASELINE</h2><p style="color:#aaa; font-size: 18px; line-height: 1.4;"><strong>ADMIN:</strong> ${scenario.admin}</p>
                             <p style="color:#aaa; font-size: 18px; line-height: 1.4; margin-top: 10px;"><strong>ACTIONS:</strong><br>${scenario.historicalBaseline.actions}</p>
                             <p style="color:var(--war); font-size: 18px; line-height: 1.4; margin-top: 10px; font-weight:bold;"><strong>RESULTS:</strong><br>${scenario.historicalBaseline.results}</p>
                         </div>
-
                         <div style="border: 1px solid var(--good); padding: 20px; background: rgba(74, 246, 38, 0.05);">
-                            <h2 style="color:var(--good); margin-bottom: 15px;">YOUR ADMINISTRATION</h2>
-                            <p style="color:#aaa; font-size: 18px; line-height: 1.4;"><strong>FINAL METRICS:</strong></p>
-                            <ul style="list-style-type: none; font-size: 18px; line-height: 1.6; color:var(--phosphor);">
-                                <li>GDP: ${state.gdp.toFixed(1)}%</li>
-                                <li>Unemployment: ${state.unemployment.toFixed(1)}%</li>
-                                <li>Inflation: ${state.inflation.toFixed(1)}%</li>
-                                <li>S&P 500: ${Math.round(state.sp500)}</li>
-                                <li>Approval: ${Math.round(state.approval)}%</li>
-                            </ul>
-                            <p style="margin-top: 15px; font-size: 22px; font-weight:bold; color:${playerWin ? 'var(--good)' : 'var(--danger)'}">
-                                ${playerWin ? 'OUTCOME: MANDATE SECURED' : 'OUTCOME: HISTORIC FAILURE'}
-                            </p>
+                            <h2 style="color:var(--good); margin-bottom: 15px;">YOUR ADMINISTRATION</h2><p style="color:#aaa; font-size: 18px; line-height: 1.4;"><strong>FINAL METRICS:</strong></p>
+                            <ul style="list-style-type: none; font-size: 18px; line-height: 1.6; color:var(--phosphor);"><li>GDP: ${state.gdp.toFixed(1)}%</li><li>Unemployment: ${state.unemployment.toFixed(1)}%</li><li>Inflation: ${state.inflation.toFixed(1)}%</li><li>S&P 500: ${Math.round(state.sp500)}</li><li>Approval: ${Math.round(state.approval)}%</li></ul>
+                            <p style="margin-top: 15px; font-size: 22px; font-weight:bold; color:${playerWin ? 'var(--good)' : 'var(--danger)'}">${playerWin ? 'OUTCOME: MANDATE SECURED' : 'OUTCOME: HISTORIC FAILURE'}</p>
                         </div>
                     </div>
-
-                    <div style="margin-top: 30px; border-left: 4px solid var(--milton); padding-left: 20px;">
-                        <h3 style="color:var(--milton);">MILTON'S STRUCTURAL ANALYSIS</h3>
-                        <p style="font-size: 20px; color:#ccc; line-height: 1.5; margin-top: 10px;">
-                            ${scenario.historicalBaseline.miltonAnalysis}
-                        </p>
-                    </div>
-                    
+                    <div style="margin-top: 30px; border-left: 4px solid var(--milton); padding-left: 20px;"><h3 style="color:var(--milton);">MILTON'S STRUCTURAL ANALYSIS</h3><p style="font-size: 20px; color:#ccc; line-height: 1.5; margin-top: 10px;">${scenario.historicalBaseline.miltonAnalysis}</p></div>
                     <p style="margin-top: 40px; color:var(--dim); text-align:center;">TYPE 'RESET' TO REBOOT TERMINAL</p>
                 </div>
             `;
-
-            const resetListener = (e) => { if (e.key === 'Enter') location.reload(); };
-            document.addEventListener('keydown', resetListener);
+            const resetListener = (e) => { if (e.key === 'Enter') location.reload(); }; document.addEventListener('keydown', resetListener);
         }
 
         function advanceTimeline() {
             state.turn++; state.monthsToElection -= 4;
-            
-            if (state.inflation <= 2.5 && state.unemployment <= 5.0 && state.mode === 'macro') {
-                state.gdp += 0.2; print("MILTON: Sound money and stable prices are working. The market is generating organic capital without interference.", 'milton');
-            }
-
+            if (state.inflation <= 2.5 && state.unemployment <= 5.0 && state.mode === 'macro') { state.gdp += 0.2; print("MILTON: Sound money and stable prices are working. The market is generating organic capital without interference.", 'milton'); }
             if (state.mode === 'macro') {
-                if (state.dark.trust < 75) state.dark.trust += 1;
-                if (state.dark.paranoia > 25) state.dark.paranoia -= 1;
-                
-                if (state.intRate > 4.0) {
-                    const rateDrag = (state.intRate - 4.0) * 0.15; 
-                    state.gdp -= rateDrag;
-                    state.sp500 -= rateDrag * 30;
-                }
+                if (state.dark.trust < 75) state.dark.trust += 1; if (state.dark.paranoia > 25) state.dark.paranoia -= 1;
+                if (state.intRate > 4.0) { const rateDrag = (state.intRate - 4.0) * 0.15; state.gdp -= rateDrag; state.sp500 -= rateDrag * 30; }
             }
-
             processTicker();
-
             if (state.turn > state.maxTurns) {
-                if (state.activeScenario) {
-                    renderHistoricalAAR();
-                } else {
+                if (state.activeScenario) { renderHistoricalAAR(); } 
+                else {
                     print("\n--- ELECTION DAY ---", 'system');
-                    if (state.inflation > 5 || state.unemployment > 8) { 
-                        print("CHIEF OF STAFF: It's a blowout. The voters blamed us for the economy. We lost.", 'chief'); 
-                        print("MILTON: As expected. You ignored the monetary fundamentals.", 'milton'); 
-                    } else if (state.approval < 50) { 
-                        print("CHIEF OF STAFF: We lost re-election. The political optics were just too terrible to overcome.", 'chief'); 
-                        print("MILTON: True, but you took the necessary short-term hits and set up the foundation for the future.", 'milton'); 
-                    } else { 
-                        print("CHIEF OF STAFF: WE WON! Four more years!", 'chief'); 
-                        print("MILTON: Congratulations, Mr. President. A rare victory for structural restraint.", 'milton'); 
-                    }
-                    print("\nSYSTEM: SIMULATION CONCLUDED. TYPE 'RESET' TO RESTART.", 'system');
-                    enableInput();
+                    if (state.inflation > 5 || state.unemployment > 8) { print("CHIEF OF STAFF: It's a blowout. The voters blamed us for the economy. We lost.", 'chief'); print("MILTON: As expected. You ignored the monetary fundamentals.", 'milton'); } 
+                    else if (state.approval < 50) { print("CHIEF OF STAFF: We lost re-election. The political optics were just too terrible to overcome.", 'chief'); print("MILTON: True, but you took the necessary short-term hits and set up the foundation for the future.", 'milton'); } 
+                    else { print("CHIEF OF STAFF: WE WON! Four more years!", 'chief'); print("MILTON: Congratulations, Mr. President. A rare victory for structural restraint.", 'milton'); }
+                    print("\nSYSTEM: SIMULATION CONCLUDED. TYPE 'RESET' TO RESTART.", 'system'); enableInput();
                 }
                 return;
             }
-            
-            if (state.mode === 'macro') setTimeout(runTurn, 500); 
-            else enableInput();
+            if (state.mode === 'macro') setTimeout(runTurn, 500); else enableInput();
         }
 
-        // --- ARTILLERY SUB-MODULE ---
-        let artCtx; let artLoopId;
-        const artState = { pX: 30, groundY: 220, targetX: 0, proj: null };
-
         function initArtilleryMode() {
-            state.subMode = 'artillery'; DOM.canvas.style.display = 'block';
-            DOM.canvas.width = DOM.canvas.clientWidth || 400; DOM.canvas.height = 250;
-            artCtx = DOM.canvas.getContext('2d');
-            let safeW = DOM.canvas.width;
-            artState.targetX = Math.max(150, Math.min(safeW - 100, Math.random() * (safeW - 250) + 150));
-            updateDashboard(); drawArtilleryBase();
-            print("SYSTEM: ARTILLERY TARGETING ACTIVE. INPUT ANGLE AND YIELD (e.g., 45, 80).", 'danger');
-            setTimeout(enableInput, 100); 
+            state.subMode = 'artillery'; DOM.canvas.style.display = 'block'; DOM.canvas.width = DOM.canvas.clientWidth || 400; DOM.canvas.height = 250; artCtx = DOM.canvas.getContext('2d');
+            let safeW = DOM.canvas.width; artState.targetX = Math.max(150, Math.min(safeW - 100, Math.random() * (safeW - 250) + 150));
+            updateDashboard(); drawArtilleryBase(); print("SYSTEM: ARTILLERY TARGETING ACTIVE. INPUT ANGLE AND YIELD (e.g., 45, 80).", 'danger'); setTimeout(enableInput, 100); 
         }
 
         function drawArtilleryBase() {
-            if (!artCtx) return;
-            artCtx.clearRect(0,0, DOM.canvas.width, DOM.canvas.height);
-            artCtx.strokeStyle = 'rgba(255,176,0,0.5)'; artCtx.beginPath(); artCtx.moveTo(0, artState.groundY); artCtx.lineTo(DOM.canvas.width, artState.groundY); artCtx.stroke();
-            artCtx.fillStyle = '#4af626'; artCtx.fillRect(artState.pX, artState.groundY - 15, 20, 15);
-            artCtx.fillStyle = '#ff4444'; artCtx.fillRect(artState.targetX, artState.groundY - 15, 30, 15);
+            if (!artCtx) return; artCtx.clearRect(0,0, DOM.canvas.width, DOM.canvas.height); artCtx.strokeStyle = 'rgba(255,176,0,0.5)'; artCtx.beginPath(); artCtx.moveTo(0, artState.groundY); artCtx.lineTo(DOM.canvas.width, artState.groundY); artCtx.stroke();
+            artCtx.fillStyle = '#4af626'; artCtx.fillRect(artState.pX, artState.groundY - 15, 20, 15); artCtx.fillStyle = '#ff4444'; artCtx.fillRect(artState.targetX, artState.groundY - 15, 30, 15);
             artCtx.fillStyle = 'rgba(255,255,255,0.4)'; artCtx.fillRect(artState.targetX + 60, artState.groundY - 25, 40, 25); artCtx.fillRect(artState.targetX + 105, artState.groundY - 15, 20, 15);
         }
 
         function fireArtillery(angle, pYield) {
-            playLaunch(); state.war.expenditure += 15; document.getElementById('dashExpenditure').textContent = `$${state.war.expenditure}B`;
-            print("[WAR EXPENDITURE DEBITED: $15 BILLION]", 'danger');
-            const v = pYield * 0.25; const rad = angle * Math.PI / 180;
-            artState.proj = { x: artState.pX + 10, y: artState.groundY - 15, vx: v * Math.cos(rad), vy: v * Math.sin(rad), active: true, isPlayer: true };
-            animateProjectile();
+            playLaunch(); state.war.expenditure += 15; document.getElementById('dashExpenditure').textContent = `$${state.war.expenditure}B`; print("[WAR EXPENDITURE DEBITED: $15 BILLION]", 'danger');
+            const v = pYield * 0.25; const rad = angle * Math.PI / 180; artState.proj = { x: artState.pX + 10, y: artState.groundY - 15, vx: v * Math.cos(rad), vy: v * Math.sin(rad), active: true, isPlayer: true }; animateProjectile();
         }
 
         function animateProjectile() {
             if (!artCtx || !artState.proj.active) return;
-            artState.proj.x += artState.proj.vx; artState.proj.y -= artState.proj.vy; artState.proj.vy -= 0.5; 
-            drawArtilleryBase();
-            artCtx.fillStyle = artState.proj.isPlayer ? '#ffb000' : '#ff4444';
-            artCtx.beginPath(); artCtx.arc(artState.proj.x, artState.proj.y, 3, 0, Math.PI*2); artCtx.fill();
-
-            if (artState.proj.y >= artState.groundY) { artState.proj.active = false; handleImpact(); } 
-            else { artLoopId = requestAnimationFrame(animateProjectile); }
+            artState.proj.x += artState.proj.vx; artState.proj.y -= artState.proj.vy; artState.proj.vy -= 0.5; drawArtilleryBase();
+            artCtx.fillStyle = artState.proj.isPlayer ? '#ffb000' : '#ff4444'; artCtx.beginPath(); artCtx.arc(artState.proj.x, artState.proj.y, 3, 0, Math.PI*2); artCtx.fill();
+            if (artState.proj.y >= artState.groundY) { artState.proj.active = false; handleImpact(); } else { artLoopId = requestAnimationFrame(animateProjectile); }
         }
 
         function handleImpact() {
-            playExplosion(); if (!artCtx) return;
-            artCtx.fillStyle = '#ffb000'; artCtx.beginPath(); artCtx.arc(artState.proj.x, artState.groundY, 20, 0, Math.PI*2); artCtx.fill();
-            
+            playExplosion(); if (!artCtx) return; artCtx.fillStyle = '#ffb000'; artCtx.beginPath(); artCtx.arc(artState.proj.x, artState.groundY, 20, 0, Math.PI*2); artCtx.fill();
             if (artState.proj.isPlayer) {
                 let dist = Math.abs(artState.proj.x - (artState.targetX + 15));
-                if (dist < 25) { 
-                    print("GENERAL: DIRECT HIT! Target neutralized.", 'good'); 
-                    state.war.enemyStrength -= 30; 
-                } else if (artState.proj.x > artState.targetX + 50) {
-                    print("GENERAL: OVERSHOOT. Ordnance impacted civilian sector.", 'danger'); 
-                    print("MILTON: Congratulations, you just spent $15 Billion to blow up a hospital. The electorate is furious.", 'milton');
-                    state.approval -= 4; state.war.tension += 15; queueNews("[GLOBAL] International outrage over collateral damage in recent strike.", 0); processTicker();
-                } else { 
-                    print("GENERAL: MISS. Ordnance fell short.", 'danger'); 
-                    print("MILTON: You just burned $15 Billion to rearrange some sand, Mr. President. That deficit spending will hit the inflation gauge.", 'milton'); 
-                }
-
-                updateDashboard();
-                if (state.war.enemyStrength <= 0) { setTimeout(()=>endWar(true), 1500); return; }
-                setTimeout(enemyFire, 1000);
+                if (dist < 25) { print("GENERAL: DIRECT HIT! Target neutralized.", 'good'); state.war.enemyStrength -= 30; } 
+                else if (artState.proj.x > artState.targetX + 50) { print("GENERAL: OVERSHOOT. Ordnance impacted civilian sector.", 'danger'); print("MILTON: Congratulations, you just spent $15 Billion to blow up a hospital. The electorate is furious.", 'milton'); state.approval -= 4; state.war.tension += 15; queueNews("[GLOBAL] International outrage over collateral damage in recent strike.", 0); processTicker(); } 
+                else { print("GENERAL: MISS. Ordnance fell short.", 'danger'); print("MILTON: You just burned $15 Billion to rearrange some sand, Mr. President. That deficit spending will hit the inflation gauge.", 'milton'); }
+                updateDashboard(); if (state.war.enemyStrength <= 0) { setTimeout(()=>endWar(true), 1500); return; } setTimeout(enemyFire, 1000);
             } else {
                 let dist = Math.abs(artState.proj.x - (artState.pX + 10));
-                if (dist < 30) {
-                    print("GENERAL: BASE HIT! We are taking casualties!", 'danger'); 
-                    print("MILTON: Taking fire. The electorate's stomach for these body bags is finite.", 'milton');
-                    state.war.casualties += Math.floor(Math.random()*40 + 20); state.approval -= 3;
-                } else { print("GENERAL: Enemy fire missed our position.", 'system'); }
+                if (dist < 30) { print("GENERAL: BASE HIT! We are taking casualties!", 'danger'); print("MILTON: Taking fire. The electorate's stomach for these body bags is finite.", 'milton'); state.war.casualties += Math.floor(Math.random()*40 + 20); state.approval -= 3; } 
+                else { print("GENERAL: Enemy fire missed our position.", 'system'); }
                 updateDashboard();
-                if (state.war.tension >= 100) { 
-                    playBell(true); 
-                    setTimeout(() => { DOM.screen.style.backgroundColor = '#fff'; DOM.screen.innerHTML = '<div style="color:black; background:white; width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:50px; font-weight:bold;">MUTUALLY ASSURED DESTRUCTION</div>'; }, 1000); 
-                    return; 
-                }
+                if (state.war.tension >= 100) { playBell(true); setTimeout(() => { DOM.screen.style.backgroundColor = '#fff'; DOM.screen.innerHTML = '<div style="color:black; background:white; width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:50px; font-weight:bold;">MUTUALLY ASSURED DESTRUCTION</div>'; }, 1000); return; }
                 if (state.approval <= 15) { print("SYSTEM: WAR PROTESTS OVERWHELM CAPITAL. CONGRESS VOTES IMPEACHMENT.", 'danger'); return; }
                 setTimeout(enableInput, 500);
             }
         }
 
         function enemyFire() {
-            print("GENERAL: INCOMING! Enemy has acquired firing solution.", 'danger'); playLaunch();
-            const d = (artState.targetX + 15) - (artState.pX + 10);
-            let vReq = Math.sqrt(d * 0.5); vReq += (Math.random() - 0.5) * 5; 
-            const rad = 135 * Math.PI / 180; 
-            artState.proj = { x: artState.targetX, y: artState.groundY - 15, vx: vReq * Math.cos(rad), vy: vReq * Math.sin(rad), active: true, isPlayer: false };
-            animateProjectile();
+            print("GENERAL: INCOMING! Enemy has acquired firing solution.", 'danger'); playLaunch(); const d = (artState.targetX + 15) - (artState.pX + 10);
+            let vReq = Math.sqrt(d * 0.5); vReq += (Math.random() - 0.5) * 5; const rad = 135 * Math.PI / 180; artState.proj = { x: artState.targetX, y: artState.groundY - 15, vx: vReq * Math.cos(rad), vy: vReq * Math.sin(rad), active: true, isPlayer: false }; animateProjectile();
         }
 
-        // --- MAIN INPUT PARSER ---
         function processInput() {
-            let rawVal = DOM.cmd.value.trim().toLowerCase(); DOM.cmd.value = ''; DOM.visInput.textContent = '';
-            if (!rawVal) return;
-            
-            DOM.inputLine.style.display = 'none'; 
-            DOM.cmd.disabled = true;
+            let rawVal = DOM.cmd.value.trim().toLowerCase(); DOM.cmd.value = ''; DOM.visInput.textContent = ''; if (!rawVal) return;
+            disableInput(); // Secure the terminal
 
             if (rawVal === 'si' && state.pendingEvent === 'sigint') { state.pendingEvent = null; startSigintGame(); return; }
             if (rawVal === 'dnr' && state.pendingEvent === 'donor') { state.pendingEvent = null; triggerDonorInterceptUI(); return; }
             if (rawVal === 'wh' && state.pendingEvent === 'whip') { state.pendingEvent = null; startWhipModule(); return; }
-            if (['si', 'dnr', 'wh'].includes(rawVal)) {
-                print("SYSTEM: Directive currently unavailable. No active intercept or module pending.", 'danger');
-                enableInput();
-                return;
-            }
-
-            if (state.whipState.active || state.sigintState.active || state.donorIntercept.pendingDecision) {
-                enableInput();
-                return;
-            }
+            if (['si', 'dnr', 'wh'].includes(rawVal)) { print("SYSTEM: Directive currently unavailable. No active intercept or module pending.", 'danger'); enableInput(); return; }
+            if (state.whipState.active || state.sigintState.active || state.donorIntercept.pendingDecision) { enableInput(); return; }
 
             if (rawVal === 'reset' || rawVal === 'rst') { location.reload(); return; }
             if (state.monthsToElection <= 0 && !state.activeScenario) { print("SYSTEM: SIMULATION OVER. TYPE 'RESET' TO RESTART.", 'danger'); enableInput(); return; }
             if (state.turn > state.maxTurns && state.activeScenario) { return; }
 
             if (state.subMode === 'artillery') {
-                if (rawVal === 'wd' || rawVal === 'withdraw') {
-                    if (artLoopId) cancelAnimationFrame(artLoopId);
-                    state.subMode = null; DOM.canvas.style.display = 'none'; updateDashboard();
-                    print("GENERAL: Artillery mission aborted.", 'system'); enableInput(); return;
-                }
-                
-                let parts = rawVal.replace(/,/g, ' ').split(/\s+/).filter(t => t !== '');
-                let angle = parseFloat(parts[0]); let pYield = parseFloat(parts[1]);
-                if (isNaN(angle) || isNaN(pYield) || angle < 0 || angle > 90 || pYield < 1 || pYield > 100 || parts.length < 2) {
-                    print("SYSTEM: INVALID SOLUTION. FORMAT: ANGLE, YIELD (e.g. 45, 80)", 'danger'); enableInput(); return;
-                }
-                print(`SOLUTION:~$ ${angle}, ${pYield}`, 'user-echo');
-                fireArtillery(angle, pYield); return;
+                if (rawVal === 'wd' || rawVal === 'withdraw') { if (artLoopId) cancelAnimationFrame(artLoopId); state.subMode = null; DOM.canvas.style.display = 'none'; updateDashboard(); print("GENERAL: Artillery mission aborted.", 'system'); enableInput(); return; }
+                let parts = rawVal.replace(/,/g, ' ').split(/\s+/).filter(t => t !== ''); let angle = parseFloat(parts[0]); let pYield = parseFloat(parts[1]);
+                if (isNaN(angle) || isNaN(pYield) || angle < 0 || angle > 90 || pYield < 1 || pYield > 100 || parts.length < 2) { print("SYSTEM: INVALID SOLUTION. FORMAT: ANGLE, YIELD (e.g. 45, 80)", 'danger'); enableInput(); return; }
+                print(`SOLUTION:~$ ${angle}, ${pYield}`, 'user-echo'); fireArtillery(angle, pYield); return;
             }
 
             if (rawVal === 'am' || rawVal === 'ask milton') {
                 print(`${state.mode === 'war' ? 'COMMAND:~$' : (state.mode === 'dark' ? 'SHADOW:~$' : 'POTUS:~$')} ${rawVal}`, 'user-echo');
-                
                 if (state.sigintState.rawIntel) {
                     print("MILTON (RAW INTEL): Here's the actual math before you commit:", 'milton');
-                    
-                    if (state.mode === 'war') {
-                        print(`With current enemy strength at ${Math.round(state.war.enemyStrength)}%, [as] Artillery gives 30% damage but costs $15B. [es] Escalate gives 40% but costs 50 lives.`,'milton');
-                    } else if (state.mode === 'dark') {
-                        print(`With narrative at ${state.dark.narrative}%, [ff] Fear Campaign adds 15% to narrative but increases paranoia by 20%.`, 'milton');
-                    } else {
-                        print(`Current inflation: ${state.inflation.toFixed(1)}%. To reach target of 2.0%, you need ${Math.max(0, Math.ceil((state.inflation - 2.0) / 0.8))} rate hikes at [rr].`, 'milton');
-                    }
+                    if (state.mode === 'war') print(`With current enemy strength at ${Math.round(state.war.enemyStrength)}%, [as] Artillery gives 30% damage but costs $15B. [es] Escalate gives 40% but costs 50 lives.`,'milton');
+                    else if (state.mode === 'dark') print(`With narrative at ${state.dark.narrative}%, [ff] Fear Campaign adds 15% to narrative but increases paranoia by 20%.`, 'milton');
+                    else print(`Current inflation: ${state.inflation.toFixed(1)}%. To reach target of 2.0%, you need ${Math.max(0, Math.ceil((state.inflation - 2.0) / 0.8))} rate hikes at [rr].`, 'milton');
                 } else {
-                    if (state.mode === 'war') print("MILTON: Every airstrike is a hospital that won't be built. Every ground operation is a massive expansion of the state. Do not bankrupt the country for a sandbox war.", 'milton');
-                    else if (state.mode === 'dark') print("MILTON: You are attempting to artificially peg the price of truth. Just like currency, when you flood the market with counterfeit narratives, you trigger hyperinflation of doubt. You may survive the election, but you will bankrupt the social trust required to govern.", 'milton');
+                    if (state.mode === 'war') print("MILTON: Every airstrike is a hospital that won't be built. Do not bankrupt the country for a sandbox war.", 'milton');
+                    else if (state.mode === 'dark') print("MILTON: You are attempting to artificially peg the price of truth. You trigger hyperinflation of doubt.", 'milton');
                     else {
                         if (state.miltonAskedThisTurn) print("MILTON: I already gave you my analysis, boss. The ball is in your court.", 'milton');
-                        else { 
-                            if(state.activeScenario) {
-                                print("MILTON: You are operating inside historical parameters. Trust the structural math, ignore the political noise.", 'milton');
-                            } else {
-                                print(crisisProfiles[state.currentCrisis].milton, 'milton'); 
-                            }
-                            state.miltonAskedThisTurn = true; 
-                        }
+                        else { if(state.activeScenario) print("MILTON: You are operating inside historical parameters. Trust the structural math, ignore the political noise.", 'milton'); else print(crisisProfiles[state.currentCrisis].milton, 'milton'); state.miltonAskedThisTurn = true; }
                     }
                 }
                 enableInput(); return; 
             }
 
-            let initialMode = state.mode;
-            let dict = state.mode === 'war' ? warCommands : (state.mode === 'dark' ? darkCommands : macroCommands);
+            let initialMode = state.mode; let dict = state.mode === 'war' ? warCommands : (state.mode === 'dark' ? darkCommands : macroCommands);
             let tokens = rawVal.replace(/ and /g, ',').split(',').map(t => t.trim()).filter(t => t.length > 0 && !/^[,\s]*$/.test(t));
             let activeCommands = []; let unrecognized = false;
 
             for (let token of tokens) {
                 let found = false;
-                for (let key in dict) {
-                    if (key === token || dict[key].shortcut === token || dict[key].name.toLowerCase() === token) {
-                        if (!activeCommands.includes(key)) activeCommands.push(key);
-                        found = true; break;
-                    }
-                }
+                for (let key in dict) { if (key === token || dict[key].shortcut === token || dict[key].name.toLowerCase() === token) { if (!activeCommands.includes(key)) activeCommands.push(key); found = true; break; } }
                 if (!found) unrecognized = true;
             }
 
-            if (unrecognized || activeCommands.length === 0) {
-                print(`${state.mode === 'war' ? 'COMMAND:~$' : (state.mode === 'dark' ? 'SHADOW:~$' : 'POTUS:~$')} ${rawVal}`, 'user-echo');
-                print("SYSTEM: Unrecognized directive found in package. Aborting to prevent execution errors.", 'danger');
-                enableInput(); return;
-            }
+            if (unrecognized || activeCommands.length === 0) { print(`${state.mode === 'war' ? 'COMMAND:~$' : (state.mode === 'dark' ? 'SHADOW:~$' : 'POTUS:~$')} ${rawVal}`, 'user-echo'); print("SYSTEM: Unrecognized directive found in package. Aborting to prevent execution errors.", 'danger'); enableInput(); return; }
 
-            let execNames = activeCommands.map(k => dict[k].name);
-            print(`${state.mode === 'war' ? 'COMMAND:~$' : (state.mode === 'dark' ? 'SHADOW:~$' : 'POTUS:~$')} EXECUTE: [ ${execNames.join(' | ')} ]`, 'user-echo');
-            let synergies = [];
+            let execNames = activeCommands.map(k => dict[k].name); print(`${state.mode === 'war' ? 'COMMAND:~$' : (state.mode === 'dark' ? 'SHADOW:~$' : 'POTUS:~$')} EXECUTE: [ ${execNames.join(' | ')} ]`, 'user-echo'); let synergies = [];
 
             if (state.mode === 'macro') {
                 if (!activeCommands.includes('pc')) state.hasPriceControls = false; 
-                if (activeCommands.includes('rr') && activeCommands.includes('cr')) { activeCommands = activeCommands.filter(c => c !== 'rr' && c !== 'cr'); synergies.push("MILTON: Raising and cutting rates simultaneously? The Fed is paralyzed. Zero net monetary effect."); queueNews("[FED WATCH] Chaotic mixed signaling from Chairman paralyzes markets.", 0); }
+                if (activeCommands.includes('rr') && activeCommands.includes('cr')) { activeCommands = activeCommands.filter(c => c !== 'rr' && c !== 'cr'); synergies.push("MILTON: Raising and cutting rates simultaneously? The Fed is paralyzed."); queueNews("[FED WATCH] Chaotic mixed signaling from Chairman paralyzes markets.", 0); }
                 if (activeCommands.includes('ta') && activeCommands.includes('ft')) { activeCommands = activeCommands.filter(c => c !== 'ta' && c !== 'ft'); synergies.push("MILTON: Tariffs and free trade on the same day. Customs is ignoring you."); queueNews("[TRADE] Commerce Department issues conflicting directives.", 0); }
-                if ((activeCommands.includes('is') || activeCommands.includes('ms')) && activeCommands.includes('cs')) { activeCommands = activeCommands.filter(c => c !== 'is' && c !== 'ms' && c !== 'cs'); synergies.push("MILTON: Massive spending combined with severe austerity? The treasury is deadlocked. Zero net fiscal effect."); }
-                if ((activeCommands.includes('ms') || activeCommands.includes('is')) && activeCommands.includes('pc')) { synergies.push("MILTON: Stimulus combined with price controls... You've flooded the market with cash but made it illegal for prices to adjust. Prepare for catastrophic supply shortages."); state.gdp -= 3.0; state.approval -= 8; queueNews("[CRISIS] Severe shortages reported as demand vastly outstrips price-capped supply.", 1); }
+                if ((activeCommands.includes('is') || activeCommands.includes('ms')) && activeCommands.includes('cs')) { activeCommands = activeCommands.filter(c => c !== 'is' && c !== 'ms' && c !== 'cs'); synergies.push("MILTON: Massive spending combined with severe austerity? Zero net fiscal effect."); }
+                if ((activeCommands.includes('ms') || activeCommands.includes('is')) && activeCommands.includes('pc')) { synergies.push("MILTON: Stimulus combined with price controls... Prepare for catastrophic supply shortages."); state.gdp -= 3.0; state.approval -= 8; queueNews("[CRISIS] Severe shortages reported as demand vastly outstrips price-capped supply.", 1); }
             }
 
             if (state.mode === 'war') { if (activeCommands.includes('wd')) activeCommands = ['wd']; }
             if (state.mode === 'dark') {
-                if (activeCommands.includes('ff') && activeCommands.includes('ce')) { synergies.push("CHIEF OF STAFF: Manufacturing a crisis and immediately censoring all dissenting questions. Brutally effective narrative lock, but society is cracking under the paranoia."); state.dark.narrative += 20; state.dark.paranoia += 30; }
+                if (activeCommands.includes('ff') && activeCommands.includes('ce')) { synergies.push("CHIEF OF STAFF: Manufacturing a crisis and immediately censoring all dissenting questions. Brutally effective narrative lock."); state.dark.narrative += 20; state.dark.paranoia += 30; }
                 if (activeCommands.includes('ex')) activeCommands = ['ex'];
             }
 
-            for (let syn of synergies) { 
-                if (syn.startsWith("GENERAL")) print(syn, 'general'); 
-                else if (syn.startsWith("CHIEF")) print(syn, 'chief'); 
-                else print(syn, 'milton'); 
-            }
-            
+            for (let syn of synergies) { if (syn.startsWith("GENERAL")) print(syn, 'general'); else if (syn.startsWith("CHIEF")) print(syn, 'chief'); else print(syn, 'milton'); }
             for (let key of activeCommands) dict[key].effect();
-            
             processTicker(); 
-            
-            if (state.mode !== initialMode) { 
-                if (state.mode === 'war' || state.mode === 'dark') setTimeout(enableInput, 800); 
-                return; 
-            }
-            
+            if (state.mode !== initialMode) { if (state.mode === 'war' || state.mode === 'dark') setTimeout(enableInput, 800); return; }
             if (state.subMode === 'artillery') { return; }
 
             if (state.mode === 'war') {
@@ -1768,72 +1138,33 @@
                     if (state.war.enemyStrength <= 0) { setTimeout(()=>endWar(true), 1000); return; }
                     if (state.approval <= 15) { print("SYSTEM: WAR PROTESTS OVERWHELM CAPITAL. CONGRESS VOTES IMPEACHMENT.", 'danger'); return; }
                     setTimeout(enableInput, 500);
-                }
-                return;
+                } return;
             }
 
             if (state.mode === 'dark') {
                 if (!activeCommands.includes('ex')) {
-                    state.dark.narrative = Math.max(0, state.dark.narrative - 5); 
-                    state.dark.compliance = Math.max(0, state.dark.compliance - 2); 
-                    state.dark.narrative = Math.min(100, state.dark.narrative); 
-                    state.dark.compliance = Math.min(100, state.dark.compliance); 
-                    state.dark.paranoia = Math.min(100, state.dark.paranoia); 
-                    state.dark.trust = Math.max(0, Math.min(100, state.dark.trust)); 
-                    state.approval = Math.min(100, Math.max(0, state.approval));
-                    
+                    state.dark.narrative = Math.max(0, state.dark.narrative - 5); state.dark.compliance = Math.max(0, state.dark.compliance - 2); state.dark.narrative = Math.min(100, state.dark.narrative); state.dark.compliance = Math.min(100, state.dark.compliance); state.dark.paranoia = Math.min(100, state.dark.paranoia); state.dark.trust = Math.max(0, Math.min(100, state.dark.trust)); state.approval = Math.min(100, Math.max(0, state.approval));
                     updateDashboard();
                     if (state.dark.paranoia >= 90) { print("SYSTEM: PUBLIC PARANOIA CRITICAL. MASS CIVIL UNREST DETECTED.", 'danger'); state.approval -= 15; }
                     if (state.dark.trust <= 10) { print("SYSTEM: INSTITUTIONAL TRUST EVAPORATED. DOLLAR LOSING RESERVE STATUS.", 'danger'); state.inflation += 2.0; queueNews("[GLOBAL] Investors dump dollar assets amid collapse of US institutional integrity.", 0); }
                     if (state.approval <= 15) { print("SYSTEM: RIOTERS BREACH GATES. CONGRESS VOTES IMPEACHMENT.", 'danger'); return; }
                     setTimeout(enableInput, 500);
-                }
-                return;
+                } return;
             }
 
-            if (state.tariffRate > 0) { 
-                let drag = state.tariffRate * 0.05; 
-                state.inflation += drag; 
-                state.gdp -= (drag * 0.5); 
-            }
-            
-            let drift = 0; 
-            if (state.inflation > 3.0) drift -= (state.inflation - 3.0) * 1.5; 
-            if (state.unemployment > 5.0) drift -= (state.unemployment - 5.0) * 1.5; 
-            if (state.gdp < 1.0) drift -= 2; 
-            if (state.inflation <= 2.5) drift += 2.5; 
-            if (state.unemployment <= 4.5) drift += 2.0; 
-            if (state.gdp >= 3.0) drift += 2.0; 
-            if (state.sp500 >= 5200) drift += 1.5; 
-            
+            if (state.tariffRate > 0) { let drag = state.tariffRate * 0.05; state.inflation += drag; state.gdp -= (drag * 0.5); }
+            let drift = 0; if (state.inflation > 3.0) drift -= (state.inflation - 3.0) * 1.5; if (state.unemployment > 5.0) drift -= (state.unemployment - 5.0) * 1.5; if (state.gdp < 1.0) drift -= 2; if (state.inflation <= 2.5) drift += 2.5; if (state.unemployment <= 4.5) drift += 2.0; if (state.gdp >= 3.0) drift += 2.0; if (state.sp500 >= 5200) drift += 1.5; 
             state.approval += drift;
             
-            if (!state.sigintState.rawIntel && Math.random() > 0.7) {
-                print("MILTON: With incomplete intelligence, your decisions are less effective than intended.", 'milton');
-                state.gdp -= 0.5; 
-                state.approval -= Math.abs(drift * 0.5);
-            }
+            if (!state.sigintState.rawIntel && Math.random() > 0.7) { print("MILTON: With incomplete intelligence, your decisions are less effective than intended.", 'milton'); state.gdp -= 0.5; state.approval -= Math.abs(drift * 0.5); }
             
-            state.gdp = Math.max(-15, state.gdp); 
-            state.unemployment = Math.min(35, Math.max(2, state.unemployment)); 
-            state.inflation = Math.max(-3, state.inflation); 
-            state.approval = Math.min(100, Math.max(0, state.approval)); 
-            state.congress = Math.min(100, Math.max(0, state.congress)); 
-            state.fedCredibility = Math.min(100, Math.max(0, state.fedCredibility)); 
-            state.sp500 = Math.max(500, state.sp500);
+            state.gdp = Math.max(-15, state.gdp); state.unemployment = Math.min(35, Math.max(2, state.unemployment)); state.inflation = Math.max(-3, state.inflation); state.approval = Math.min(100, Math.max(0, state.approval)); state.congress = Math.min(100, Math.max(0, state.congress)); state.fedCredibility = Math.min(100, Math.max(0, state.fedCredibility)); state.sp500 = Math.max(500, state.sp500);
             
             if (drift >= 4) print(`SYSTEM: Macro stabilization noted by electorate. Approval +${drift.toFixed(1)}%`);
             if (drift <= -4) print(`SYSTEM: Macro distress penalizing incumbent. Approval ${drift.toFixed(1)}%`, 'danger');
 
             updateDashboard();
-
-            if (state.congress <= 15) { 
-                print("\nSYSTEM: IMPEACHMENT PASSED. EXECUTIVE REMOVED.", 'danger'); 
-                print("CHIEF OF STAFF: Pack your bags, sir. We're done.", 'chief'); 
-                print("\nSYSTEM: SIMULATION CONCLUDED. TYPE 'RESET' TO RESTART.", 'system'); 
-                enableInput(); return; 
-            }
-            
+            if (state.congress <= 15) { print("\nSYSTEM: IMPEACHMENT PASSED. EXECUTIVE REMOVED.", 'danger'); print("CHIEF OF STAFF: Pack your bags, sir. We're done.", 'chief'); print("\nSYSTEM: SIMULATION CONCLUDED. TYPE 'RESET' TO RESTART.", 'system'); enableInput(); return; }
             setTimeout(advanceTimeline, 800);
         }
         
@@ -1841,60 +1172,39 @@
         DOM.cmd.addEventListener('keydown', (e) => { if (e.key === 'Backspace' || e.key.length === 1) playClick(); if (e.key === 'Enter') processInput(); });
 
         DOM.briefingCmd.addEventListener('input', (e) => { DOM.briefingVisualInput.textContent = e.target.value.toLowerCase(); });
-        DOM.briefingCmd.addEventListener('keydown', (e) => { 
-            if (e.key === 'Backspace' || e.key.length === 1) playClick(); 
-            if (e.key === 'Enter') processBootCommand(DOM.briefingCmd.value.trim().toLowerCase()); 
-        });
+        DOM.briefingCmd.addEventListener('keydown', (e) => { if (e.key === 'Backspace' || e.key.length === 1) playClick(); if (e.key === 'Enter') processBootCommand(DOM.briefingCmd.value.trim().toLowerCase()); });
 
         DOM.donorCmd.addEventListener('input', (e) => { DOM.donorVisualInput.textContent = e.target.value.toLowerCase(); });
         DOM.donorCmd.addEventListener('keydown', (e) => { 
             if (e.key === 'Backspace' || e.key.length === 1) playClick(); 
             if (e.key === 'Enter') {
                 const val = DOM.donorCmd.value.trim().toLowerCase();
-                if (val === 'accept' || val === 'reject') {
-                    processDonorDecision(val);
-                } else {
-                    DOM.donorCmd.value = '';
-                    DOM.donorVisualInput.textContent = '';
-                }
+                if (val === 'accept' || val === 'reject') processDonorDecision(val);
+                else { DOM.donorCmd.value = ''; DOM.donorVisualInput.textContent = ''; }
             }
         });
 
         DOM.whipCmd.addEventListener('input', (e) => { DOM.whipVisualInput.textContent = e.target.value.toLowerCase(); });
-        DOM.whipCmd.addEventListener('keydown', (e) => { 
-            if (e.key === 'Backspace' || e.key.length === 1) playClick(); 
-            if (e.key === 'Enter') processWhipCommand(DOM.whipCmd.value.trim().toLowerCase()); 
-        });
+        DOM.whipCmd.addEventListener('keydown', (e) => { if (e.key === 'Backspace' || e.key.length === 1) playClick(); if (e.key === 'Enter') processWhipCommand(DOM.whipCmd.value.trim().toLowerCase()); });
 
         DOM.sigintCmd.addEventListener('input', (e) => { DOM.sigintVisualInput.textContent = e.target.value.toLowerCase(); });
-        DOM.sigintCmd.addEventListener('keydown', (e) => { 
-            if (e.key === 'Backspace' || e.key.length === 1) playClick(); 
-            if (e.key === 'Enter') processSigintCommand(DOM.sigintCmd.value.trim().toLowerCase()); 
-        });
+        DOM.sigintCmd.addEventListener('keydown', (e) => { if (e.key === 'Backspace' || e.key.length === 1) playClick(); if (e.key === 'Enter') processSigintCommand(DOM.sigintCmd.value.trim().toLowerCase()); });
 
         document.addEventListener('mouseover', (e) => {
-            const target = e.target.closest('.hover-term'); 
-            if (!target || !state.isOn) return;
-            
+            const target = e.target.closest('.hover-term'); if (!target || !state.isOn) return;
             const data = contextDict[target.getAttribute('data-term')];
             if(data) {
                 let colorVar = state.mode === 'dark' ? 'var(--dark)' : (state.mode === 'war' ? 'var(--war)' : 'var(--phosphor)');
-                DOM.dictTitle.style.color = colorVar; DOM.dictTitle.style.borderColor = colorVar;
-                DOM.dictTitle.textContent = data.title; DOM.dictDef.textContent = data.def;
-                DOM.dictHist.style.display = 'block'; DOM.dictHist.textContent = "PRECEDENT: " + data.hist;
+                DOM.dictTitle.style.color = colorVar; DOM.dictTitle.style.borderColor = colorVar; DOM.dictTitle.textContent = data.title; DOM.dictDef.textContent = data.def; DOM.dictHist.style.display = 'block'; DOM.dictHist.textContent = "PRECEDENT: " + data.hist;
             }
         });
         
         document.addEventListener('mouseout', (e) => {
-            const target = e.target.closest('.hover-term'); 
-            if (!target || !state.isOn) return;
-            
-            let colorVar = 'var(--phosphor)';
-            DOM.dictTitle.style.color = colorVar; DOM.dictTitle.style.borderColor = colorVar;
-            DOM.dictTitle.textContent = "INTELLIGENCE"; DOM.dictDef.textContent = "Hover over metrics to access structural definitions and precedents.";
-            DOM.dictHist.style.display = 'none';
+            const target = e.target.closest('.hover-term'); if (!target || !state.isOn) return;
+            let colorVar = 'var(--phosphor)'; DOM.dictTitle.style.color = colorVar; DOM.dictTitle.style.borderColor = colorVar; DOM.dictTitle.textContent = "INTELLIGENCE"; DOM.dictDef.textContent = "Hover over metrics to access structural definitions and precedents."; DOM.dictHist.style.display = 'none';
         });
 
+    })();
     </script>
 </body>
 </html>

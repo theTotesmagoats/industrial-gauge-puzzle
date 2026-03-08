@@ -106,25 +106,34 @@
             text-shadow: 0 0 6px #33FF00;
         }
 
-        /* Cipher Hover Mechanic */
+        /* Cipher Hover Mechanic FIXED FOR OVERFLOW */
         .cipher-hint {
             cursor: help;
             border-bottom: 2px dotted #33FF00;
             position: relative;
+            color: #FFFFCC; /* Slightly lighter yellow to make it pop */
         }
+        
         .cipher-hint:hover::after {
-            content: "DECRYPTION LOGIC [SHIFT -3]:\nW -> T\nD -> A\nU -> R\nJ -> G\nH -> E\nW -> T\n========================\nFINAL ANSWER: TARGET\n(TYPE 'TARGET' TO BYPASS)";
+            content: "DECRYPTION LOGIC [SHIFT -3]:\A W -> T\A D -> A\A U -> R\A J -> G\A H -> E\A W -> T\A ========================\A FINAL ANSWER: TARGET\A (TYPE 'TARGET' TO BYPASS)";
+            
+            /* Vital positioning fix: center-aligned and constrained width */
             position: absolute;
-            bottom: 120%;
-            left: 0;
+            bottom: 125%; /* Slightly higher */
+            left: 50%;
+            transform: translateX(-50%); /* Centering trick */
+            width: max-content; /* Sized to content but constrained below */
+            max-width: 80vw; /* Keeps it inside screen on small viewports/wrapping */
+            
             background: #051105;
             border: 2px solid #33FF00;
             padding: 15px;
-            white-space: pre;
+            white-space: pre-wrap; /* Allows wrapping inside tooltip if max-width hit */
             z-index: 10;
-            box-shadow: 0 0 15px #000;
+            box-shadow: 0 0 20px #000;
             pointer-events: none;
             font-weight: bold;
+            color: #33FF00;
         }
     </style>
 </head>
@@ -176,25 +185,25 @@
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         
-        // Machine gun / Heavy Teletype envelope
+        // Heavy Teletype cadence
         osc.type = 'square';
-        osc.frequency.setValueAtTime(120, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05); 
+        osc.frequency.setValueAtTime(130, audioCtx.currentTime); // Lighter tone than sub-bass
+        osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05); // Rapid decay
         
-        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05); // Precise envelope
         
         osc.connect(gain);
         gain.connect(audioCtx.destination);
         osc.start();
-        osc.stop(audioCtx.currentTime + 0.05);
+        osc.stop(audioCtx.currentTime + 0.05); // clipped 50ms pulse
     };
 
     inputField.addEventListener('input', () => {
         if (inputField.value.trim() !== '') playClick();
     });
 
-    const printText = (text, speed = 45, callback = null) => {
+    const printText = (text, speed = 40, callback = null) => {
         isTyping = true;
         inputField.disabled = true;
         let i = 0;
@@ -253,7 +262,7 @@
             easyMode = (cmd === '2');
             state = 'BOOT';
             promptSpan.innerText = "C:\\>";
-            printText("CONFIGURING HARDWARE...\nCONNECTION LOCKED. TYPE 'HELP' TO DIAGNOSE.", 45);
+            printText("CONFIGURING HARDWARE...\nWAITING FOR VACUUM TUBES TO WARM UP...\nCONNECTION LOCKED. TYPE 'HELP' TO DIAGNOSE.", 40);
         } else {
             printText("INVALID SELECTION. ENTER 1 OR 2.");
         }
@@ -267,13 +276,13 @@
         }
         
         if (cmd === 'TARGET') {
-            printText("AUTHORIZATION ACCEPTED. WELCOME TO TERMINAL MK IV.\nTYPE 'HELP' FOR TACTICAL OPERATIONS.", 45, () => {
+            printText("AUTHORIZATION ACCEPTED. WELCOME TO TERMINAL MK IV.\nTYPE 'HELP' FOR TACTICAL OPERATIONS.", 40, () => {
                 state = 'CONNECTED';
                 promptSpan.innerText = "HQ_LINK>";
             });
         } else {
             alertLevel++;
-            printText(`INVALID KEY. ALERT LEVEL: ${alertLevel}/3. TYPE 'HELP'.`);
+            printText(`INVALID KEY. THE GESTAPO HAS BEEN NOTIFIED OF YOUR INCOMPETENCE.\nALERT LEVEL: ${alertLevel}/3. TYPE 'HELP' IF YOU LACK BASIC TRAINING.`);
             if (alertLevel >= 3) {
                 printText("*** CRITICAL ALERT: BUNKER DOORS BREACHED. TERMINAL PURGING. YOU HAVE FAILED. ***", 60, () => {
                     inputField.style.display = 'none';
@@ -290,7 +299,7 @@
         if (action === 'HELP') {
             printText("AVAILABLE COMMANDS:\n- STATUS     : CHECK SYSTEM AND TRIANGULATION RISKS\n- SEARCH [X] : SEARCH ENVIRONMENT (E.G., SEARCH DESK, SEARCH LOCKER)\n- TAKE [X]   : ACQUIRE ITEM (E.G., TAKE COMPASS)\n- INV        : CHECK INVENTORY\n- BOOST_SIG  : AMPLIFY RADIO (WARNING: INCREASES DETECTION RISK)\n- REQ_EXTRACT: REQUEST EXTRACTION COORDINATES");
         } else if (action === 'STATUS') {
-            printText(`SYSTEM: NOMINAL.\nOPERATOR STATUS: ALIVE.\nTRIANGULATION RISK: ${triangulationRisk}%`);
+            printText(`SYSTEM: NOMINAL.\nOPERATOR STATUS: ALIVE (TEMPORARILY).\nTRIANGULATION RISK: ${triangulationRisk}%`);
         } else if (action === 'SEARCH') {
             if (!target) {
                 printText("SPECIFY TARGET: SEARCH DESK OR SEARCH LOCKER.");
@@ -328,7 +337,7 @@
             }
         } else if (action === 'BOOST_SIG') {
             if (signalBoosted) {
-                printText("SIGNAL ALREADY AT MAXIMUM.");
+                printText("SIGNAL ALREADY AT MAXIMUM. STOP MASHING THE BUTTON.");
             } else {
                 signalBoosted = true;
                 triangulationRisk += 40;
@@ -336,16 +345,16 @@
             }
         } else if (action === 'REQ_EXTRACT') {
             if (!signalBoosted) {
-                printText("TRANSMISSION FAILED. STATIC INTERFERENCE TOO HIGH. HQ CANNOT HEAR YOU.");
+                printText("TRANSMISSION FAILED. STATIC INTERFERENCE TOO HIGH. HQ CANNOT HEAR YOU. CONSIDER YOUR SIGNAL STRENGTH.");
             } else if (!inventory.includes('COMPASS') || !inventory.includes('DOSSIER')) {
                 printText(`HQ: "NEGATIVE ON EXTRACTION. WE NEED THE INTEL DOSSIER AND YOU NEED A COMPASS TO NAVIGATE TO THE LZ. SECURE THOSE ASSETS FIRST."`);
             } else {
                 state = 'CALC_EXTRACT';
                 let timeWindow = 45 - (triangulationRisk * 0.25); 
-                printText(`HQ CONNECTED.\n"Assets confirmed. Patrols are moving in. We are holding a C-47 transport at Sector Grid 70-X."\n"You are currently at Sector Grid 40-X. The distance is exactly 30 kilometers."\n"You must travel at a sprint pace of 10 kilometers per hour."\n"Due to your signal noise, we can only keep the plane waiting for ${timeWindow} hours."\n\nCALCULATE: How many hours will it take you to reach the transport?\nENTER HOURS:`);
+                printText(`HQ CONNECTED.\n"Assets confirmed. Listen up. Patrols are moving in. We are holding a C-47 transport at Sector Grid 70-X."\n"You are currently at Sector Grid 40-X. The distance is exactly 30 kilometers."\n"You must travel at a sprint pace of 10 kilometers per hour."\n"Due to your signal noise, we can only keep the plane waiting for ${timeWindow} hours."\n\nCALCULATE: How many hours will it take you to reach the transport?\nENTER HOURS:`);
             }
         } else {
-            printText("COMMAND UNRECOGNIZED.");
+            printText("COMMAND UNRECOGNIZED. STOP TYPING GIBBERISH AND FOCUS.");
         }
     };
 
@@ -354,7 +363,7 @@
         if (answer === 3) {
             let timeWindow = 45 - (triangulationRisk * 0.25);
             if (3 <= timeWindow) {
-                printText("COORDINATES LOCKED. THE MATH CHECKS OUT.\nGRAB YOUR GEAR. WE WILL SEE YOU IN LONDON.\n\n*** MISSION SUCCESS ***", 45, () => {
+                printText("COORDINATES LOCKED. THE MATH CHECKS OUT.\nGRAB YOUR GEAR. WE WILL SEE YOU IN LONDON.\n\n*** MISSION SUCCESS ***", 40, () => {
                     inputField.style.display = 'none';
                 });
             } else {
@@ -368,7 +377,7 @@
     };
 
     // Init Sequence
-    printText("TERMINAL POWERED ON.\nSELECT OPERATOR PROTOCOL:\n[1] NORMAL OP (STANDARD ENCRYPTION)\n[2] TRAINING OP (ASSISTED DECRYPTION)\nENTER SELECTION:");
+    printText("TERMINAL POWERED ON.\nPLEASE CHOOSE YOUR PROTOCOL:\n[1] NORMAL OP (STANDARD ENCRYPTION)\n[2] TRAINING OP (ASSISTED DECRYPTION)\nENTER SELECTION:");
 
     inputField.addEventListener('keypress', function (e) {
         if (e.key === 'Enter') {

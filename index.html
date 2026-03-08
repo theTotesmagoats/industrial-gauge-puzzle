@@ -2,198 +2,198 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Digital Dollhouse</title>
+    <title>Terminal Mk IV - Operation Vanguard</title>
     <style>
-        body { 
-            margin: 0; overflow: hidden; background: #87CEEB; 
-            touch-action: none; display: flex; justify-content: center; align-items: center; height: 100vh;
-            font-family: sans-serif;
+        body {
+            background-color: #050505;
+            color: #33FF00;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            text-shadow: 0 0 5px #33FF00;
         }
-        canvas { 
-            box-shadow: 0 10px 50px rgba(0,0,0,0.3);
-            max-width: 100vw; max-height: 100vh; object-fit: contain;
+        
+        /* CRT Scanline Effect */
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
         }
-        #cleanup-btn {
-            position: fixed; top: 20px; right: 20px;
-            padding: 15px 30px; font-size: 1.5rem; font-weight: bold;
-            background: #FF69B4; border: 4px solid white; border-radius: 20px;
-            color: white; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            cursor: pointer; z-index: 10; transition: transform 0.1s;
+
+        #output {
+            flex-grow: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-bottom: 10px;
+            padding-right: 10px;
         }
-        #cleanup-btn:active { transform: scale(0.95); }
+
+        #input-line {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        #prompt { margin-right: 10px; }
+
+        input[type="text"] {
+            background: transparent;
+            border: none;
+            color: #33FF00;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1em;
+            flex-grow: 1;
+            outline: none;
+            text-transform: uppercase;
+            text-shadow: 0 0 5px #33FF00;
+        }
     </style>
 </head>
 <body>
 
-<button id="cleanup-btn">Clean Up Room!</button>
-<canvas id="stage"></canvas>
+<div id="output"></div>
+<div id="input-line">
+    <span id="prompt">C:\></span>
+    <input type="text" id="cmd" autocomplete="off" autofocus>
+</div>
 
 <script>
-    const canvas = document.getElementById('stage');
-    const ctx = canvas.getContext('2d');
-    
-    // Virtual Matrix
-    const GAME_W = 1600;
-    const GAME_H = 1200;
-    
-    let scale = 1;
-    let items = [];
-    let isDragging = false;
-    let dragTarget = null;
-    let offsetX = 0;
-    let offsetY = 0;
+    const outputDiv = document.getElementById('output');
+    const inputField = document.getElementById('cmd');
+    const promptSpan = document.getElementById('prompt');
 
-    const svgToURI = (svg) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    // Engine State
+    let state = 'BOOT';
+    let isTyping = false;
+    
+    // Consequence Variables (Second Order Effects)
+    let alertLevel = 0;
+    let signalBoosted = false;
+    let triangulationRisk = 0;
 
-    // Expanded Asset Dictionary (20 Items)
-    const assetData = {
-        woman: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200"><circle cx="50" cy="30" r="20" fill="#f1c27d"/><path d="M30,60 Q50,40 70,60 L85,140 L15,140 Z" fill="#9370DB"/><rect x="35" y="140" width="10" height="50" fill="#f1c27d"/><rect x="55" y="140" width="10" height="50" fill="#f1c27d"/></svg>`),
-        man: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200"><circle cx="50" cy="30" r="20" fill="#f1c27d"/><rect x="25" y="55" width="50" height="70" rx="10" fill="#4682B4"/><rect x="30" y="125" width="15" height="70" fill="#2F4F4F"/><rect x="55" y="125" width="15" height="70" fill="#2F4F4F"/></svg>`),
-        boy: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200"><circle cx="50" cy="40" r="22" fill="#f1c27d"/><rect x="25" y="65" width="50" height="60" rx="8" fill="#FF8C00"/><rect x="30" y="125" width="15" height="60" fill="#191970"/><rect x="55" y="125" width="15" height="60" fill="#191970"/></svg>`),
-        girl: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200"><circle cx="50" cy="50" r="22" fill="#f1c27d"/><path d="M30,75 Q50,60 70,75 L85,140 L15,140 Z" fill="#FF69B4"/><rect x="35" y="140" width="10" height="40" fill="#f1c27d"/><rect x="55" y="140" width="10" height="40" fill="#f1c27d"/></svg>`),
-        dog: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><ellipse cx="50" cy="60" rx="40" ry="20" fill="#8B4513"/><circle cx="80" cy="40" r="15" fill="#8B4513"/><path d="M70,20 L80,40 L90,20 Z" fill="#654321"/><rect x="30" y="70" width="8" height="20" fill="#8B4513"/><rect x="70" y="70" width="8" height="20" fill="#8B4513"/></svg>`),
-        cat: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><ellipse cx="50" cy="70" rx="25" ry="15" fill="#FFA500"/><circle cx="70" cy="50" r="12" fill="#FFA500"/><path d="M60,35 L70,50 L80,35 Z" fill="#FF8C00"/></svg>`),
-        bed: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120"><rect x="10" y="60" width="180" height="30" rx="5" fill="#8B4513"/><rect x="20" y="40" width="160" height="30" fill="#FFB6C1"/><rect x="25" y="30" width="50" height="20" rx="10" fill="#FFF"/></svg>`),
-        couch: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120"><rect x="10" y="30" width="180" height="60" rx="10" fill="#CD5C5C"/><rect x="20" y="60" width="160" height="30" fill="#F08080"/><rect x="5" y="50" width="25" height="40" rx="5" fill="#8B0000"/><rect x="170" y="50" width="25" height="40" rx="5" fill="#8B0000"/></svg>`),
-        fridge: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 160"><rect x="10" y="10" width="60" height="140" rx="5" fill="#E0E0E0"/><rect x="10" y="10" width="60" height="50" rx="5" fill="#D3D3D3"/><line x1="20" y1="20" x2="20" y2="40" stroke="#A9A9A9" stroke-width="3"/><line x1="20" y1="70" x2="20" y2="100" stroke="#A9A9A9" stroke-width="3"/></svg>`),
-        stove: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" rx="5" fill="#D3D3D3"/><rect x="10" y="10" width="80" height="30" rx="5" fill="#A9A9A9"/><circle cx="30" cy="25" r="8" fill="#333"/><circle cx="70" cy="25" r="8" fill="#333"/><rect x="20" y="50" width="60" height="30" rx="5" fill="#696969"/></svg>`),
-        tub: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><path d="M10,30 L150,30 L140,80 Q140,90 130,90 L30,90 Q20,90 20,80 Z" fill="#FFF" stroke="#ADD8E6" stroke-width="4"/><rect x="130" y="10" width="10" height="20" fill="#C0C0C0"/></svg>`),
-        toilet: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 120"><rect x="20" y="10" width="40" height="50" rx="5" fill="#FFF" stroke="#DDD" stroke-width="2"/><ellipse cx="40" cy="80" rx="30" ry="20" fill="#FFF" stroke="#DDD" stroke-width="2"/><ellipse cx="40" cy="80" rx="20" ry="10" fill="#E0E0E0"/></svg>`),
-        table: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><rect x="20" y="30" width="120" height="15" rx="5" fill="#D2B48C"/><rect x="30" y="45" width="10" height="50" fill="#8B4513"/><rect x="120" y="45" width="10" height="50" fill="#8B4513"/></svg>`),
-        chair1: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 120"><rect x="10" y="60" width="40" height="10" fill="#D2B48C"/><rect x="10" y="10" width="10" height="100" fill="#8B4513"/><rect x="40" y="60" width="10" height="50" fill="#8B4513"/><rect x="20" y="20" width="20" height="40" fill="#D2B48C"/></svg>`),
-        chair2: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 120"><rect x="10" y="60" width="40" height="10" fill="#D2B48C"/><rect x="10" y="10" width="10" height="100" fill="#8B4513"/><rect x="40" y="60" width="10" height="50" fill="#8B4513"/><rect x="20" y="20" width="20" height="40" fill="#D2B48C"/></svg>`),
-        tv: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100"><rect x="10" y="10" width="100" height="70" rx="5" fill="#333"/><rect x="15" y="15" width="90" height="60" fill="#1E90FF"/><rect x="40" y="80" width="40" height="10" fill="#222"/></svg>`),
-        lamp: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 160"><rect x="25" y="40" width="10" height="110" fill="#DAA520"/><path d="M10,40 L50,40 L40,10 L20,10 Z" fill="#FFF8DC"/><ellipse cx="30" cy="150" rx="25" ry="10" fill="#DAA520"/></svg>`),
-        plant: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 120"><rect x="25" y="80" width="30" height="40" fill="#8B4513"/><path d="M40,80 Q10,40 40,10 Q70,40 40,80" fill="#228B22"/></svg>`),
-        bookcase: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 160"><rect x="10" y="10" width="80" height="140" fill="#8B4513"/><rect x="15" y="15" width="70" height="130" fill="#A0522D"/><rect x="15" y="45" width="70" height="5" fill="#8B4513"/><rect x="15" y="85" width="70" height="5" fill="#8B4513"/><rect x="15" y="125" width="70" height="5" fill="#8B4513"/></svg>`),
-        rug: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100"><ellipse cx="100" cy="50" rx="90" ry="40" fill="#9370DB"/><ellipse cx="100" cy="50" rx="70" ry="25" fill="#E6E6FA"/></svg>`)
+    const printText = (text, speed = 20, callback = null) => {
+        isTyping = true;
+        inputField.disabled = true;
+        let i = 0;
+        const interval = setInterval(() => {
+            outputDiv.innerHTML += text.charAt(i);
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+            i++;
+            if (i >= text.length) {
+                clearInterval(interval);
+                outputDiv.innerHTML += '<br>';
+                isTyping = false;
+                inputField.disabled = false;
+                inputField.focus();
+                if (callback) callback();
+            }
+        }, speed);
     };
 
-    function initGame() {
-        canvas.width = GAME_W;
-        canvas.height = GAME_H;
-        
-        // Configuration array dictates logical constraints
-        const itemConfig = [
-            { id: 'man', w: 70, h: 160 }, { id: 'woman', w: 70, h: 160 }, 
-            { id: 'boy', w: 60, h: 130 }, { id: 'girl', w: 50, h: 110 },
-            { id: 'dog', w: 60, h: 60 }, { id: 'cat', w: 40, h: 40 },
-            { id: 'bed', w: 180, h: 100 }, { id: 'couch', w: 160, h: 90 },
-            { id: 'rug', w: 180, h: 90 }, { id: 'table', w: 140, h: 90 },
-            { id: 'chair1', w: 50, h: 100 }, { id: 'chair2', w: 50, h: 100 },
-            { id: 'fridge', w: 70, h: 140 }, { id: 'stove', w: 80, h: 80 },
-            { id: 'tub', w: 140, h: 90 }, { id: 'toilet', w: 60, h: 90 },
-            { id: 'tv', w: 100, h: 80 }, { id: 'bookcase', w: 80, h: 140 },
-            { id: 'plant', w: 60, h: 90 }, { id: 'lamp', w: 40, h: 120 }
-        ];
+    const handleInput = (rawCmd) => {
+        if (isTyping) return;
+        const cmd = rawCmd.trim().toUpperCase();
+        outputDiv.innerHTML += `<br><span style="color:#FFF">> ${cmd}</span><br>`;
+        inputField.value = '';
 
-        // Map items onto a 2-row grid inside the "Yard" area
-        itemConfig.forEach((cfg, index) => {
-            let img = new Image();
-            img.src = assetData[cfg.id];
-            
-            const row = Math.floor(index / 10); // 10 items per row
-            const col = index % 10;
-            
-            // X interval padding based on 1600 total width
-            const startX = 120 + (col * 150);
-            const startY = (GAME_H - 180) + (row * 100);
-
-            items.push({ 
-                img, w: cfg.w, h: cfg.h, 
-                x: startX, y: startY, 
-                startX: startX, startY: startY // Permanent record of initial position
-            });
-        });
-        
-        resize();
-        draw();
-    }
-
-    function resize() {
-        scale = Math.min(window.innerWidth / GAME_W, window.innerHeight / GAME_H);
-        canvas.style.width = `${GAME_W * scale}px`;
-        canvas.style.height = `${GAME_H * scale}px`;
-    }
-
-    function getEventPos(e) {
-        const rect = canvas.getBoundingClientRect();
-        return { x: (e.clientX - rect.left) / scale, y: (e.clientY - rect.top) / scale };
-    }
-
-    // Hit Detection & Z-Index Management
-    canvas.addEventListener('pointerdown', (e) => {
-        const pos = getEventPos(e);
-        for (let i = items.length - 1; i >= 0; i--) {
-            let item = items[i];
-            if (pos.x >= item.x - item.w/2 && pos.x <= item.x + item.w/2 &&
-                pos.y >= item.y - item.h/2 && pos.y <= item.y + item.h/2) {
-                isDragging = true;
-                dragTarget = item;
-                offsetX = pos.x - item.x;
-                offsetY = pos.y - item.y;
-                items.push(items.splice(i, 1)[0]);
+        switch (state) {
+            case 'BOOT':
+                processBoot(cmd);
                 break;
+            case 'CONNECTED':
+                processCommand(cmd);
+                break;
+            case 'CALC_EXTRACT':
+                processExtraction(cmd);
+                break;
+        }
+    };
+
+    const processBoot = (cmd) => {
+        if (cmd === 'HELP') {
+            printText("SYSTEM FAULT: PREVIOUS OPERATOR EXPUNGED (KIA). OVERRIDE REQUIRED.\nAUTHORIZATION CIPHER IN USE: SHIFT -3.\nENCRYPTED KEY: 'WDUJHW'\nENTER DECRYPTED KEY:");
+            return;
+        }
+        
+        if (cmd === 'TARGET') {
+            printText("AUTHORIZATION ACCEPTED. WELCOME TO TERMINAL MK IV.\nDO NOT SPILL COFFEE ON THE CONSOLE. PENALTY IS TREASON.\nTYPE 'HELP' FOR COMMAND OPERATIONS.", 20, () => {
+                state = 'CONNECTED';
+                promptSpan.innerText = "HQ_LINK>";
+            });
+        } else {
+            alertLevel++;
+            printText(`INVALID KEY. THE GESTAPO HAS BEEN NOTIFIED OF YOUR INCOMPETENCE.\nALERT LEVEL: ${alertLevel}/3. TYPE 'HELP' IF YOU LACK BASIC TRAINING.`);
+            if (alertLevel >= 3) {
+                printText("\n*** CRITICAL ALERT: BUNKER DOORS BREACHED. TERMINAL PURGING. YOU HAVE FAILED. ***", 50, () => {
+                    inputField.style.display = 'none';
+                });
             }
         }
+    };
+
+    const processCommand = (cmd) => {
+        if (cmd === 'HELP') {
+            printText("AVAILABLE COMMANDS:\n- STATUS     : CHECK SYSTEM AND ALERT LEVELS\n- BOOST_SIG  : AMPLIFY RADIO TO COMMAND (WARNING: INCREASES DETECTION RISK)\n- REQ_EXTRACT: REQUEST EXTRACTION COORDINATES FROM HQ");
+        } else if (cmd === 'STATUS') {
+            printText(`SYSTEM: NOMINAL.\nOPERATOR STATUS: ALIVE (TEMPORARILY).\nTRIANGULATION RISK: ${triangulationRisk}%`);
+        } else if (cmd === 'BOOST_SIG') {
+            if (signalBoosted) {
+                printText("SIGNAL ALREADY AT MAXIMUM. STOP MASHING THE BUTTON.");
+            } else {
+                signalBoosted = true;
+                triangulationRisk += 40;
+                printText("WARNING: SIGNAL BOOSTED. TRANSMISSION CLARITY SECURED.\nCONSEQUENCE: GERMAN RDF STATIONS ARE LOCKING ONTO THIS SECTOR.");
+            }
+        } else if (cmd === 'REQ_EXTRACT') {
+            if (!signalBoosted) {
+                printText("TRANSMISSION FAILED. STATIC INTERFERENCE TOO HIGH. HQ CANNOT HEAR YOU. CONSIDER YOUR SIGNAL STRENGTH.");
+            } else {
+                state = 'CALC_EXTRACT';
+                let timeWindow = 45 - (triangulationRisk * 0.25); // Math consequence
+                printText(`HQ CONNECTED.\n"Listen up. Patrols are moving in. We are holding a C-47 transport at Sector Grid 70-X."\n"You are currently at Sector Grid 40-X. The distance is exactly 30 kilometers."\n"You must travel at a sprint pace of 10 kilometers per hour."\n"Due to your signal noise, we can only keep the plane waiting for ${timeWindow} hours."\n\nCALCULATE: How many hours will it take you to reach the transport?\nENTER HOURS:`);
+            }
+        } else {
+            printText("COMMAND UNRECOGNIZED. STOP TYPING GIBBERISH AND WIN THE WAR.");
+        }
+    };
+
+    const processExtraction = (cmd) => {
+        let answer = parseFloat(cmd);
+        if (answer === 3) {
+            let timeWindow = 45 - (triangulationRisk * 0.25);
+            if (3 <= timeWindow) {
+                printText("COORDINATES LOCKED. THE MATH CHECKS OUT.\nGRAB YOUR GEAR. WE WILL SEE YOU IN LONDON.\n\n*** MISSION SUCCESS ***");
+                inputField.style.display = 'none';
+            } else {
+                printText("THE MATH IS CORRECT, BUT YOU TOOK TOO LONG. THE PLANE LEFT.\nYOUR DECISION TO BOOST THE SIGNAL BROUGHT THE PATROLS TOO FAST.\n\n*** MISSION FAILED ***");
+                inputField.style.display = 'none';
+            }
+        } else {
+            printText("INCORRECT CALCULATION. IF YOU CAN'T DO MATH, YOU CAN'T BE RESCUED. TRY AGAIN:");
+        }
+    };
+
+    // Init
+    printText("BOOT SEQUENCE INITIATED...\nESTABLISHING SECURE CONNECTION...\nERROR: CONNECTION LOCKED. TYPE 'HELP' TO DIAGNOSE.", 30);
+
+    inputField.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            handleInput(inputField.value);
+        }
     });
-
-    canvas.addEventListener('pointermove', (e) => {
-        if (!isDragging || !dragTarget) return;
-        const pos = getEventPos(e);
-        dragTarget.x = pos.x - offsetX;
-        dragTarget.y = pos.y - offsetY;
-    });
-
-    window.addEventListener('pointerup', () => { isDragging = false; dragTarget = null; });
-
-    // Cleanup Button Logic
-    document.getElementById('cleanup-btn').addEventListener('click', () => {
-        // Iterate and reassign coordinate states to structural baseline
-        items.forEach(item => {
-            item.x = item.startX;
-            item.y = item.startY;
-        });
-    });
-
-    function drawHouse() {
-        const houseW = 1200;
-        const houseH = 700;
-        const houseX = (GAME_W - houseW) / 2;
-        const houseY = 250;
-
-        ctx.fillStyle = '#FF69B4'; // Roof
-        ctx.beginPath(); ctx.moveTo(GAME_W / 2, 50); ctx.lineTo(houseX - 50, houseY); ctx.lineTo(houseX + houseW + 50, houseY); ctx.fill();
-
-        ctx.fillStyle = '#FFF5EE'; ctx.fillRect(houseX, houseY, houseW, houseH);
-        ctx.strokeStyle = '#8B4513'; ctx.lineWidth = 10; ctx.strokeRect(houseX, houseY, houseW, houseH);
-
-        // Internal Walls
-        ctx.beginPath(); ctx.moveTo(houseX + houseW/2, houseY); ctx.lineTo(houseX + houseW/2, houseY + houseH);
-        ctx.moveTo(houseX, houseY + houseH/2); ctx.lineTo(houseX + houseW, houseY + houseH/2); ctx.stroke();
-
-        // Room Backgrounds
-        ctx.fillStyle = 'rgba(255, 182, 193, 0.2)'; ctx.fillRect(houseX, houseY, houseW/2, houseH/2);
-        ctx.fillStyle = 'rgba(173, 216, 230, 0.2)'; ctx.fillRect(houseX + houseW/2, houseY, houseW/2, houseH/2);
-        ctx.fillStyle = 'rgba(255, 228, 181, 0.2)'; ctx.fillRect(houseX, houseY + houseH/2, houseW/2, houseH/2);
-        ctx.fillStyle = 'rgba(152, 251, 152, 0.2)'; ctx.fillRect(houseX + houseW/2, houseY + houseH/2, houseW/2, houseH/2);
-    }
-
-    function draw() {
-        ctx.fillStyle = '#87CEEB'; ctx.fillRect(0, 0, GAME_W, GAME_H);
-        ctx.fillStyle = '#7CFC00'; ctx.fillRect(0, GAME_H - 250, GAME_W, 250); // Lawn/Tray
-        drawHouse();
-
-        items.forEach(item => {
-            if(item.img.complete) ctx.drawImage(item.img, item.x - item.w/2, item.y - item.h/2, item.w, item.h);
-        });
-
-        requestAnimationFrame(draw);
-    }
-
-    window.addEventListener('resize', resize);
-    initGame();
 </script>
+
 </body>
 </html>

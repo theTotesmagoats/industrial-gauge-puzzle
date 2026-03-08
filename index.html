@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <style>
         body {
-            background-color: #050505;
+            background-color: #020202;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -16,67 +16,91 @@
             margin: 0;
             font-family: 'VT323', monospace;
             overflow: hidden;
+            user-select: none;
         }
 
-        /* Industrial Bezel Maximized */
+        /* Military Hardware Bezel */
         #chassis {
-            background-color: #2a2c29;
-            width: 95vw;
-            height: 95vh;
-            padding: 30px;
-            border-radius: 8px;
+            background-color: #1e201d;
+            width: 96vw;
+            height: 96vh;
+            padding: 40px;
+            border-radius: 20px;
             box-sizing: border-box;
             box-shadow: 
-                inset 0 0 20px #0a0a0a,
-                0 0 40px rgba(0,0,0,0.9);
-            border: 4px solid #151515;
+                inset 0 0 20px #000,
+                0 0 50px rgba(0,0,0,1);
+            border: 8px solid #0a0b0a;
             position: relative;
             display: flex;
+            flex-direction: column;
         }
 
-        /* Rivets */
         .rivet {
             position: absolute;
-            width: 14px;
-            height: 14px;
-            background: #1a1a1a;
+            width: 16px;
+            height: 16px;
+            background: #111;
             border-radius: 50%;
-            box-shadow: inset 2px 2px 3px #444, inset -2px -2px 3px #000;
+            box-shadow: inset 2px 2px 4px #333, inset -2px -2px 4px #000;
         }
-        .r-tl { top: 8px; left: 8px; }
-        .r-tr { top: 8px; right: 8px; }
-        .r-bl { bottom: 8px; left: 8px; }
-        .r-br { bottom: 8px; right: 8px; }
+        .r-tl { top: 12px; left: 12px; }
+        .r-tr { top: 12px; right: 12px; }
+        .r-bl { bottom: 12px; left: 12px; }
+        .r-br { bottom: 12px; right: 12px; }
 
-        /* CRT Screen Maximized */
+        /* Advanced CRT Screen Rendering */
         #screen {
-            background-color: #030803;
+            background: radial-gradient(circle at center, #051a05 0%, #000000 90%);
             width: 100%;
             height: 100%;
-            border-radius: 10px;
+            border-radius: 25px; /* Curved corners for tube effect */
             padding: 30px;
             box-sizing: border-box;
-            box-shadow: inset 0 0 60px #000;
-            border: 6px solid #0a0a0a;
+            box-shadow: 
+                inset 0 0 80px rgba(0,0,0,1),
+                0 0 10px rgba(51,255,0,0.1);
+            border: 12px solid #050505;
             position: relative;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             color: #33FF00;
-            text-shadow: 0 0 6px #33FF00;
-            font-size: 1.8rem; /* Increased for the VT323 font */
-            letter-spacing: 1px;
+            text-shadow: 0 0 5px #33FF00, 0 0 10px #33FF00; /* Phosphor Bloom */
+            font-size: 1.8rem;
+            letter-spacing: 2px;
+            animation: flicker 0.15s infinite;
         }
 
+        /* Subtle Screen Flicker */
+        @keyframes flicker {
+            0% { opacity: 0.98; }
+            50% { opacity: 1; }
+            100% { opacity: 0.99; }
+        }
+
+        /* CRT Scanlines */
         #screen::after {
             content: " ";
             display: block;
             position: absolute;
             top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-            z-index: 2;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
+            z-index: 4;
             background-size: 100% 4px;
             pointer-events: none;
+        }
+
+        /* Glass Reflection */
+        #screen::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: -10%; left: -10%; width: 120%; height: 120%;
+            background: radial-gradient(ellipse at top left, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 50%);
+            z-index: 5;
+            pointer-events: none;
+            border-radius: 50%;
         }
 
         #output {
@@ -94,6 +118,7 @@
             align-items: center;
             font-weight: bold;
             z-index: 3;
+            margin-bottom: 10px;
         }
 
         #prompt { margin-right: 15px; }
@@ -107,9 +132,25 @@
             flex-grow: 1;
             outline: none;
             text-transform: uppercase;
-            text-shadow: 0 0 6px #33FF00;
-            letter-spacing: 1px;
+            text-shadow: 0 0 5px #33FF00;
+            letter-spacing: 2px;
         }
+
+        /* Persistent Command Interface */
+        #command-bar {
+            display: none; /* Hidden until HELP is triggered */
+            border-top: 2px solid #1a551a;
+            padding-top: 10px;
+            margin-top: auto;
+            font-size: 1.4rem;
+            color: #1a881a;
+            text-shadow: none;
+            z-index: 3;
+            justify-content: space-between;
+        }
+
+        .cmd-block { border-right: 2px solid #1a551a; padding-right: 15px; margin-right: 15px; }
+        .cmd-block:last-child { border-right: none; }
 
         /* Cipher Hover Mechanic */
         .cipher-hint {
@@ -127,7 +168,7 @@
             transform: translateX(-50%); 
             width: max-content; 
             max-width: 80vw; 
-            background: #051105;
+            background: #020a02;
             border: 2px solid #33FF00;
             padding: 15px;
             white-space: pre-wrap; 
@@ -152,6 +193,14 @@
             <span id="prompt">SYS_INIT></span>
             <input type="text" id="cmd" autocomplete="off" autofocus>
         </div>
+        <div id="command-bar">
+            <span class="cmd-block">STATUS</span>
+            <span class="cmd-block">SEARCH [X]</span>
+            <span class="cmd-block">TAKE [X]</span>
+            <span class="cmd-block">INV</span>
+            <span class="cmd-block">BOOST_SIG</span>
+            <span>REQ_EXTRACT</span>
+        </div>
     </div>
 </div>
 
@@ -159,6 +208,7 @@
     const outputDiv = document.getElementById('output');
     const inputField = document.getElementById('cmd');
     const promptSpan = document.getElementById('prompt');
+    const commandBar = document.getElementById('command-bar');
 
     // Engine Variables
     let state = 'DIFFICULTY_SELECT';
@@ -167,7 +217,7 @@
     
     // Tactical & Environmental Variables
     let alertLevel = 0;
-    let signalBoosted = 0; // Changed to integer to track multiple boosts
+    let signalBoosted = 0; 
     let triangulationRisk = 0;
     let inventory = [];
     let environment = {
@@ -199,13 +249,12 @@
         noise.buffer = buffer;
         noise.loop = true;
         
-        // Lowpass filter to muffle the harsh digital white noise into AM radio static
         const filter = audioCtx.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.value = 1200;
+        filter.frequency.value = 800; // Deeply muffled
 
         staticGainNode = audioCtx.createGain();
-        staticGainNode.gain.value = 0.01; // Barely audible baseline
+        staticGainNode.gain.value = 0.005; // Almost silent baseline
 
         noise.connect(filter);
         filter.connect(staticGainNode);
@@ -217,29 +266,29 @@
         if (!audioCtx) return;
         const t = audioCtx.currentTime;
 
-        // The "Click" (High frequency mechanical snap)
+        // The "Snap" (Plastic keycap striking the switch housing - high pitch, instant decay)
         const oscHigh = audioCtx.createOscillator();
         const gainHigh = audioCtx.createGain();
-        oscHigh.type = 'triangle';
-        oscHigh.frequency.setValueAtTime(800, t);
-        oscHigh.frequency.exponentialRampToValueAtTime(100, t + 0.02);
-        gainHigh.gain.setValueAtTime(0.3, t);
-        gainHigh.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
+        oscHigh.type = 'square';
+        oscHigh.frequency.setValueAtTime(1500, t);
+        oscHigh.frequency.exponentialRampToValueAtTime(100, t + 0.015);
+        gainHigh.gain.setValueAtTime(0.4, t);
+        gainHigh.gain.exponentialRampToValueAtTime(0.001, t + 0.015);
         oscHigh.connect(gainHigh).connect(audioCtx.destination);
         oscHigh.start(t);
-        oscHigh.stop(t + 0.02);
+        oscHigh.stop(t + 0.015);
 
-        // The "Clack" (Lower frequency mechanical thud)
+        // The "Thud" (The tactile bump bottoming out against the metal plate - lower tone)
         const oscLow = audioCtx.createOscillator();
         const gainLow = audioCtx.createGain();
-        oscLow.type = 'square';
-        oscLow.frequency.setValueAtTime(200, t);
-        oscLow.frequency.exponentialRampToValueAtTime(40, t + 0.04);
-        gainLow.gain.setValueAtTime(0.4, t);
-        gainLow.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+        oscLow.type = 'triangle';
+        oscLow.frequency.setValueAtTime(400, t);
+        oscLow.frequency.exponentialRampToValueAtTime(50, t + 0.03);
+        gainLow.gain.setValueAtTime(0.3, t);
+        gainLow.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
         oscLow.connect(gainLow).connect(audioCtx.destination);
         oscLow.start(t);
-        oscLow.stop(t + 0.04);
+        oscLow.stop(t + 0.03);
     };
 
     inputField.addEventListener('input', () => {
@@ -249,7 +298,8 @@
         }
     });
 
-    const printText = (text, speed = 40, callback = null) => {
+    // Keeping print speed fast (30ms) to sync with the new lighter click sound
+    const printText = (text, speed = 30, callback = null) => {
         isTyping = true;
         inputField.disabled = true;
         let i = 0;
@@ -308,7 +358,7 @@
             easyMode = (cmd === '2');
             state = 'BOOT';
             promptSpan.innerText = "C:\\>";
-            printText("CONFIGURING HARDWARE...\nWAITING FOR VACUUM TUBES TO WARM UP...\nCONNECTION LOCKED. TYPE 'HELP' TO DIAGNOSE.");
+            printText("CONFIGURING HARDWARE...\nWAITING FOR CATHODE RAY TUBE WARMUP...\nCONNECTION LOCKED. TYPE 'HELP' TO DIAGNOSE.");
         } else {
             printText("INVALID SELECTION. ENTER 1 OR 2.");
         }
@@ -322,7 +372,7 @@
         }
         
         if (cmd === 'TARGET') {
-            printText("AUTHORIZATION ACCEPTED. WELCOME TO TERMINAL MK IV.\nTYPE 'HELP' FOR TACTICAL OPERATIONS.", 40, () => {
+            printText("AUTHORIZATION ACCEPTED. WELCOME TO TERMINAL MK IV.\nTYPE 'HELP' FOR TACTICAL OPERATIONS.", 30, () => {
                 state = 'CONNECTED';
                 promptSpan.innerText = "HQ_LINK>";
             });
@@ -330,7 +380,7 @@
             alertLevel++;
             printText(`INVALID KEY. THE GESTAPO HAS BEEN NOTIFIED OF YOUR INCOMPETENCE.\nALERT LEVEL: ${alertLevel}/3. TYPE 'HELP'.`);
             if (alertLevel >= 3) {
-                printText("*** CRITICAL ALERT: BUNKER DOORS BREACHED. TERMINAL PURGING. YOU HAVE FAILED. ***", 60, () => {
+                printText("*** CRITICAL ALERT: BUNKER DOORS BREACHED. TERMINAL PURGING. YOU HAVE FAILED. ***", 50, () => {
                     inputField.style.display = 'none';
                     if(staticGainNode) staticGainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 2);
                 });
@@ -344,7 +394,9 @@
         const target = args[1];
 
         if (action === 'HELP') {
-            printText("AVAILABLE COMMANDS:\n- STATUS     : CHECK SYSTEM AND TRIANGULATION RISKS\n- SEARCH [X] : SEARCH ENVIRONMENT (E.G., SEARCH DESK, SEARCH LOCKER)\n- TAKE [X]   : ACQUIRE ITEM (E.G., TAKE COMPASS)\n- INV        : CHECK INVENTORY\n- BOOST_SIG  : AMPLIFY RADIO (WARNING: INCREASES DETECTION RISK)\n- REQ_EXTRACT: REQUEST EXTRACTION COORDINATES");
+            // Second-Order Effect: Revealing commands permanently alters the UI.
+            commandBar.style.display = 'flex';
+            printText("COMMAND INTERFACE UNLOCKED. PERSISTENT HEADS-UP DISPLAY ENGAGED.");
         } else if (action === 'STATUS') {
             printText(`SYSTEM: NOMINAL.\nOPERATOR STATUS: ALIVE.\nTRIANGULATION RISK: ${triangulationRisk}%\nRADIO AMPLIFICATION LEVEL: ${signalBoosted}`);
         } else if (action === 'SEARCH') {
@@ -389,9 +441,8 @@
                 signalBoosted++;
                 triangulationRisk += 30;
                 
-                // Increase static volume audibly
                 if (staticGainNode) {
-                    let newVolume = 0.01 + (signalBoosted * 0.15);
+                    let newVolume = 0.005 + (signalBoosted * 0.15);
                     staticGainNode.gain.linearRampToValueAtTime(newVolume, audioCtx.currentTime + 1);
                 }
 
@@ -419,7 +470,7 @@
             if (3 <= timeWindow) {
                 printText("COORDINATES LOCKED. THE MATH CHECKS OUT.\nGRAB YOUR GEAR. WE WILL SEE YOU IN LONDON.\n\n*** MISSION SUCCESS ***", 40, () => {
                     inputField.style.display = 'none';
-                    if(staticGainNode) staticGainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3); // fade out static
+                    if(staticGainNode) staticGainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3); 
                 });
             } else {
                 printText("THE MATH IS CORRECT, BUT YOU TOOK TOO LONG. THE PLANE LEFT.\nYOUR DECISION TO BOOST THE SIGNAL BROUGHT THE PATROLS TOO FAST.\n\n*** MISSION FAILED ***", 60, () => {
@@ -431,7 +482,6 @@
         }
     };
 
-    // Init Sequence
     printText("TERMINAL POWERED ON.\nPLEASE CHOOSE YOUR PROTOCOL:\n[1] NORMAL OP (STANDARD ENCRYPTION)\n[2] TRAINING OP (ASSISTED DECRYPTION)\nENTER SELECTION:");
 
     inputField.addEventListener('keypress', function (e) {

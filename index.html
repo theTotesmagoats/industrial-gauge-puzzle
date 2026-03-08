@@ -3,51 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Princess Castle Builder</title>
+    <title>Princess Room Decorator</title>
     <style>
         :root {
-            --bg-top: #ffafbd;
-            --bg-bottom: #ffc3a0;
-            --pink-bright: #ff69b4;
-            --pink-soft: #ffb6c1;
+            /* Palette: Deep Castle Pinks */
+            --castle-stone: #ffe4e1;
+            --carpet: #ff69b4;
+            --sky: #ffeff0;
+            --arch-shadow: #ffb6c1;
+            --ui-bg: rgba(255, 255, 255, 0.9);
+            --pink-accent: #ff1493;
         }
-        body { margin: 0; overflow: hidden; font-family: sans-serif; background: linear-gradient(to bottom, var(--bg-top), var(--bg-bottom)); height: 100vh; touch-action: none; }
+
+        body { margin: 0; overflow: hidden; font-family: 'Comic Sans MS', cursive, sans-serif; height: 100vh; touch-action: none; background-color: var(--sky); }
         canvas { display: block; }
         
         #ui-tray {
-            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 15px; background: rgba(255, 255, 255, 0.8);
-            padding: 15px 25px; border-radius: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            backdrop-filter: blur(5px); border: 3px solid white;
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 10px; background: var(--ui-bg);
+            padding: 10px 20px; border-radius: 40px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            backdrop-filter: blur(5px); border: 4px solid white; max-width: 90%; overflow-x: auto;
         }
         
         .tool {
-            font-size: 3rem; cursor: pointer; transition: transform 0.1s;
-            user-select: none; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.1));
+            width: 70px; height: 70px; display: flex; align-items: center; justify-content: center;
+            border-radius: 20px; cursor: pointer; transition: transform 0.1s, background-color 0.2s;
+            user-select: none; border: 2px solid transparent; flex-shrink: 0;
         }
-        .tool:active { transform: scale(1.3); }
-        .tool.selected { border-bottom: 4px solid var(--pink-bright); }
+        .tool img { max-width: 80%; max-height: 80%; pointer-events: none; }
+        .tool:active { transform: scale(1.2); }
+        .tool.selected { background-color: #fff0f5; border-color: var(--pink-accent); }
 
         #undo-btn {
-            position: fixed; top: 20px; right: 20px;
-            padding: 15px 25px; font-size: 1.5rem; font-weight: bold;
-            background: white; border: none; border-radius: 15px;
-            color: var(--pink-bright); box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            cursor: pointer;
+            position: fixed; top: 15px; right: 15px;
+            padding: 12px 20px; font-size: 1.2rem; font-weight: bold;
+            background: white; border: 3px solid var(--pink-accent); border-radius: 12px;
+            color: var(--pink-accent); box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            cursor: pointer; z-index: 10;
         }
     </style>
 </head>
 <body>
 
-<button id="undo-btn">Oops! (Undo)</button>
+<button id="undo-btn">Oops!</button>
 
 <div id="ui-tray">
-    <div class="tool" onclick="setTool('🏰')">🏰</div>
-    <div class="tool" onclick="setTool('🗼')">🗼</div>
-    <div class="tool" onclick="setTool('🪟')">🪟</div>
-    <div class="tool" onclick="setTool('🚩')">🚩</div>
-    <div class="tool" onclick="setTool('🌸')">🌸</div>
-    <div class="tool" onclick="setTool('✨')">✨</div>
+    <div class="tool selected" onclick="setTool('drapes', 0)"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MCAxMDAiPjxwYXRoIGQ9Ik0wLDBIMjBDNDAsMCw0MCwxMDAsMjAsMTAwSDBaIiBmaWxsPSIjRkY2OUI0Ii8+PHBhdGggZD0iTTAgMEwyMCAwIEM0MCAwIDQwIDEwMCAyMCAxMDAgTDAgMTAwWiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkYxNDkzIiBzdHJva2Utd2lkdGg9IjUiLz48L3N2Zz4="/></div>
+    <div class="tool" onclick="setTool('crown', 1)"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgNjAiPjxwYXRoIGQ9Ik0xMCw1MEwzMCwyMEw1MCw0MEw3MCwyMEw5MCw1MEgxMFoiIGZpbGw9IiNGRkQ3MDAiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjQwIiByPSIxMCIgZmlsbD0iI0ZGMTQ5MyIvPjwvc3ZnPg=="/></div>
+    <div class="tool" onclick="setTool('art', 2)"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MCA4MCI+PHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNERkNGQ0MiLz48cmVjdCB4PSIxMCIgeT0iMTAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjOEM0MjlDIiBzdHJva2Utd2lkdGg9IjgiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjQwIiByPSIyMCIgZmlsbD0iI0ZGMTQ5MyIvPjwvc3ZnPg=="/></div>
+    <div class="tool" onclick="setTool('princess', 3)"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MCAxMDAiPjxwb2x5Z29uIHBvaW50cz0iNDAsMzAgMTAsOTAgNzAsOTAiIGZpbGw9IiNGRjE0OTMiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjIwIiByPSIxNSIgZmlsbD0iI0ZGRDAwMCIvPjwvc3ZnPg=="/></div>
+    <div class="tool" onclick="setTool('prince', 4)"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MCAxMDAiPjxyZWN0IHg9IjIwIiB5PSIzMCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMDBCRkZGIi8+PHJlY3QgeD0iMTAiIHk9IjkwIiB3aWR0aD0iNjAiIGhlaWdodD0iMTAiIGZpbGw9IiNERkNGQ0MiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjIwIiByPSIxNSIgZmlsbD0iI0ZGRDAwMCIvPjwvc3ZnPg=="/></div>
+    <div class="tool" onclick="setTool('jester', 5)"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MCAxMDAiPjxwb2x5Z29uIHBvaW50cz0iNDAsMzAgMTAsODAgNzAsODAiIGZpbGw9IiNERjRENEQiLz48cG9seWdvbiBvaW50cz0iMTAsMzAgNDAsMCA3MCwzMCA0MCw2MCIgZmlsbD0iI0ZGRDAwMCIvPjxjaXJjbGUgY3g9IjQwIiBjeT0iMjAiIHI9IjE1IiBmaWxsPSIjRkZEMDAwIi8+PC9zdmc+"/></div>
 </div>
 
 <canvas id="canvas"></canvas>
@@ -56,88 +62,124 @@
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     let width, height;
-    let currentTool = '🏰';
-    let elements = [];
-    let particles = [];
+    
+    // Sticker Definitions (using the same base64 SVGs as the UI)
+    const stickerDefs = [
+        { id: 'drapes', src: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MCAxMDAiPjxwYXRoIGQ9Ik0wLDBIMjBDNDAsMCw0MCwxMDAsMjAsMTAwSDBaIiBmaWxsPSIjRkY2OUI0Ii8+PHBhdGggZD0iTTAgMEwyMCAwIEM0MCAwIDQwIDEwMCAyMCAxMDAgTDAgMTAwWiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkYxNDkzIiBzdHJva2Utd2lkdGg9IjUiLz48L3N2Zz4=', aspect: 0.4 },
+        { id: 'crown', src: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgNjAiPjxwYXRoIGQ9Ik0xMCw1MEwzMCwyMEw1MCw0MEw3MCwyMEw5MCw1MEgxMFoiIGZpbGw9IiNGRkQ3MDAiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjQwIiByPSIxMCIgZmlsbD0iI0ZGMTQ5MyIvPjwvc3ZnPg==', aspect: 1.66 },
+        { id: 'art', src: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MCA4MCI+PHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNERkNGQ0MiLz48cmVjdCB4PSIxMCIgeT0iMTAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjOEM0MjlDIiBzdHJva2Utd2lkdGg9IjgiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjQwIiByPSIyMCIgZmlsbD0iI0ZGMTQ5MyIvPjwvc3ZnPg==', aspect: 1.0 },
+        { id: 'princess', src: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MCAxMDAiPjxwb2x5Z29uIHBvaW50cz0iNDAsMzAgMTAsOTAgNzAsOTAiIGZpbGw9IiNGRjE0OTMiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjIwIiByPSIxNSIgZmlsbD0iI0ZGRDAwMCIvPjwvc3ZnPg==', aspect: 0.8 },
+        { id: 'prince', src: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MCAxMDAiPjxyZWN0IHg9IjIwIiB5PSIzMCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMDBCRkZGIi8+PHJlY3QgeD0iMTAiIHk9IjkwIiB3aWR0aD0iNjAiIGhlaWdodD0iMTAiIGZpbGw9IiNERkNGQ0MiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjIwIiByPSIxNSIgZmlsbD0iI0ZGRDAwMCIvPjwvc3ZnPg==', aspect: 0.8 },
+        { id: 'jester', src: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MCAxMDAiPjxwb2x5Z29uIHBvaW50cz0iNDAsMzAgMTAsODAgNzAsODAiIGZpbGw9IiNERjRENEQiLz48cG9seWdvbiBvaW50cz0iMTAsMzAgNDAsMCA3MCwzMCA0MCw2MCIgZmlsbD0iI0ZGRDAwMCIvPjxjaXJjbGUgY3g9IjQwIiBjeT0iMjAiIHI9IjE1IiBmaWxsPSIjRkZEMDAwIi8+PC9zdmc+', aspect: 0.8 }
+    ];
+    
+    // Pre-load images for canvas drawing
+    stickerDefs.forEach(def => {
+        def.img = new Image();
+        def.img.src = def.src;
+    });
+
+    let activeStickerIndex = 0;
+    let placedStickers = [];
+    let sparkles = [];
 
     function resize() {
         width = canvas.width = window.innerWidth;
         height = canvas.height = window.innerHeight;
-        draw();
+        requestAnimationFrame(drawScene); // Draw once background
     }
 
-    function setTool(tool) {
-        currentTool = tool;
-        // Visual feedback for tool selection
+    function setTool(toolId, index) {
+        activeStickerIndex = index;
         document.querySelectorAll('.tool').forEach(el => el.classList.remove('selected'));
-        event.target.classList.add('selected');
+        event.currentTarget.classList.add('selected');
     }
 
+    // Place sticker on click
     canvas.addEventListener('pointerdown', (e) => {
         const x = e.clientX;
         const y = e.clientY;
-        
-        // Add element to the world
-        elements.push({
-            char: currentTool,
+        const def = stickerDefs[activeStickerIndex];
+
+        // Basic Constraint: Drapes are always tall. People are medium. Crowns are small.
+        let baseHeight = 150;
+        if(def.id === 'drapes') baseHeight = 350;
+        if(def.id === 'crown') baseHeight = 60;
+
+        placedStickers.push({
+            img: def.img,
             x: x,
             y: y,
-            size: 60 + Math.random() * 40 // Variations in size
+            h: baseHeight + Math.random() * 20, // Tiny variation
+            w: (baseHeight * def.aspect)
         });
 
-        // Create Sparkles
-        for(let i=0; i<15; i++) {
-            particles.push({
+        // Add visual feedback (Magic Sparkles)
+        for(let i=0; i<10; i++){
+            sparkles.push({
                 x: x, y: y,
-                vx: (Math.random() - 0.5) * 10,
-                vy: (Math.random() - 0.5) * 10,
-                life: 1.0,
-                color: `hsl(${330 + Math.random() * 30}, 100%, 70%)`
+                vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
+                life: 1.0, color: `hsl(${320+Math.random()*40}, 100%, 70%)`
             });
         }
     });
 
     document.getElementById('undo-btn').addEventListener('click', () => {
-        elements.pop();
+        placedStickers.pop();
     });
 
-    function draw() {
+    function drawScene() {
         ctx.clearRect(0, 0, width, height);
+        
+        // --- DRAW BACKGROUND (Internal Castle Hall) ---
+        ctx.fillStyle = '#ffeff0'; // Sky (through windows)
+        ctx.fillRect(0,0,width,height);
 
-        // Draw Grass/Floor
-        ctx.fillStyle = '#98fb98';
-        ctx.fillRect(0, height - 100, width, 100);
+        // Draw Arches and Walls (Pink Stone)
+        ctx.fillStyle = '#ffe4e1'; 
+        const archWidth = width / 3;
+        for(let i=0; i<3; i++){
+            // Wall Pillars
+            ctx.fillRect(i*archWidth, 0, archWidth * 0.1, height);
+            // Arch curve
+            ctx.beginPath();
+            ctx.ellipse(i*archWidth + archWidth/2, height*0.3, archWidth/2, height*0.2, 0, Math.PI, 0);
+            ctx.fill();
+        }
+        
+        // Draw Carpet (Floor)
+        ctx.fillStyle = '#ff69b4';
+        ctx.fillRect(0, height * 0.75, width, height * 0.25);
+    }
 
-        // Draw Placed Elements
-        elements.forEach(el => {
-            ctx.font = `${el.size}px serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(el.char, el.x, el.y);
+    function loop() {
+        // Redraw scene (needed every frame because particles are moving)
+        drawScene();
+
+        // Draw Placed Stickers (layered in order)
+        placedStickers.forEach(s => {
+            // Draw centered on click coordinate
+            ctx.drawImage(s.img, s.x - s.w/2, s.y - s.h/2, s.w, s.h);
         });
 
-        // Draw Particles
+        // Draw/Update Sparkles
         particles.forEach((p, i) => {
             ctx.globalAlpha = p.life;
             ctx.fillStyle = p.color;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-            ctx.fill();
-            
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.1; // Gravity
-            p.life -= 0.02;
-            if (p.life <= 0) particles.splice(i, 1);
+            ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill();
+            p.x+=p.vx; p.y+=p.vy; p.vy+=0.1; // gravity
+            p.life-=0.03; if(p.life<=0) sparkles.splice(i,1);
         });
         ctx.globalAlpha = 1.0;
 
-        requestAnimationFrame(draw);
+        requestAnimationFrame(loop);
     }
 
     window.addEventListener('resize', resize);
     resize();
-    draw();
+    // Wait for images to load before starting loop
+    setTimeout(loop, 200); 
+
 </script>
 </body>
 </html>

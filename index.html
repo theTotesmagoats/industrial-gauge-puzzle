@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>Terminal Mk IV - Operation Vanguard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <style>
         body {
             background-color: #050505;
@@ -11,7 +14,7 @@
             align-items: center;
             height: 100vh;
             margin: 0;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'VT323', monospace;
             overflow: hidden;
         }
 
@@ -61,7 +64,8 @@
             flex-direction: column;
             color: #33FF00;
             text-shadow: 0 0 6px #33FF00;
-            font-size: 1.2rem;
+            font-size: 1.8rem; /* Increased for the VT323 font */
+            letter-spacing: 1px;
         }
 
         #screen::after {
@@ -82,7 +86,7 @@
             margin-bottom: 10px;
             padding-right: 15px;
             z-index: 3;
-            line-height: 1.4;
+            line-height: 1.2;
         }
 
         #input-line {
@@ -98,42 +102,40 @@
             background: transparent;
             border: none;
             color: #33FF00;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'VT323', monospace;
             font-size: 1em;
             flex-grow: 1;
             outline: none;
             text-transform: uppercase;
             text-shadow: 0 0 6px #33FF00;
+            letter-spacing: 1px;
         }
 
-        /* Cipher Hover Mechanic FIXED FOR OVERFLOW */
+        /* Cipher Hover Mechanic */
         .cipher-hint {
             cursor: help;
             border-bottom: 2px dotted #33FF00;
             position: relative;
-            color: #FFFFCC; /* Slightly lighter yellow to make it pop */
+            color: #FFFFCC; 
         }
         
         .cipher-hint:hover::after {
             content: "DECRYPTION LOGIC [SHIFT -3]:\A W -> T\A D -> A\A U -> R\A J -> G\A H -> E\A W -> T\A ========================\A FINAL ANSWER: TARGET\A (TYPE 'TARGET' TO BYPASS)";
-            
-            /* Vital positioning fix: center-aligned and constrained width */
             position: absolute;
-            bottom: 125%; /* Slightly higher */
+            bottom: 125%; 
             left: 50%;
-            transform: translateX(-50%); /* Centering trick */
-            width: max-content; /* Sized to content but constrained below */
-            max-width: 80vw; /* Keeps it inside screen on small viewports/wrapping */
-            
+            transform: translateX(-50%); 
+            width: max-content; 
+            max-width: 80vw; 
             background: #051105;
             border: 2px solid #33FF00;
             padding: 15px;
-            white-space: pre-wrap; /* Allows wrapping inside tooltip if max-width hit */
+            white-space: pre-wrap; 
             z-index: 10;
             box-shadow: 0 0 20px #000;
             pointer-events: none;
-            font-weight: bold;
             color: #33FF00;
+            line-height: 1.2;
         }
     </style>
 </head>
@@ -165,7 +167,7 @@
     
     // Tactical & Environmental Variables
     let alertLevel = 0;
-    let signalBoosted = false;
+    let signalBoosted = 0; // Changed to integer to track multiple boosts
     let triangulationRisk = 0;
     let inventory = [];
     let environment = {
@@ -175,32 +177,76 @@
 
     // Procedural Audio Engine
     let audioCtx;
+    let staticGainNode;
+
     const initAudio = () => {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            startStaticNoise();
+        }
         if (audioCtx.state === 'suspended') audioCtx.resume();
+    };
+
+    const startStaticNoise = () => {
+        const bufferSize = audioCtx.sampleRate * 2; 
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+        
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = buffer;
+        noise.loop = true;
+        
+        // Lowpass filter to muffle the harsh digital white noise into AM radio static
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 1200;
+
+        staticGainNode = audioCtx.createGain();
+        staticGainNode.gain.value = 0.01; // Barely audible baseline
+
+        noise.connect(filter);
+        filter.connect(staticGainNode);
+        staticGainNode.connect(audioCtx.destination);
+        noise.start();
     };
 
     const playClick = () => {
         if (!audioCtx) return;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        
-        // Heavy Teletype cadence
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(130, audioCtx.currentTime); // Lighter tone than sub-bass
-        osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05); // Rapid decay
-        
-        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05); // Precise envelope
-        
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.05); // clipped 50ms pulse
+        const t = audioCtx.currentTime;
+
+        // The "Click" (High frequency mechanical snap)
+        const oscHigh = audioCtx.createOscillator();
+        const gainHigh = audioCtx.createGain();
+        oscHigh.type = 'triangle';
+        oscHigh.frequency.setValueAtTime(800, t);
+        oscHigh.frequency.exponentialRampToValueAtTime(100, t + 0.02);
+        gainHigh.gain.setValueAtTime(0.3, t);
+        gainHigh.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
+        oscHigh.connect(gainHigh).connect(audioCtx.destination);
+        oscHigh.start(t);
+        oscHigh.stop(t + 0.02);
+
+        // The "Clack" (Lower frequency mechanical thud)
+        const oscLow = audioCtx.createOscillator();
+        const gainLow = audioCtx.createGain();
+        oscLow.type = 'square';
+        oscLow.frequency.setValueAtTime(200, t);
+        oscLow.frequency.exponentialRampToValueAtTime(40, t + 0.04);
+        gainLow.gain.setValueAtTime(0.4, t);
+        gainLow.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+        oscLow.connect(gainLow).connect(audioCtx.destination);
+        oscLow.start(t);
+        oscLow.stop(t + 0.04);
     };
 
     inputField.addEventListener('input', () => {
-        if (inputField.value.trim() !== '') playClick();
+        if (inputField.value.trim() !== '') {
+            initAudio(); 
+            playClick();
+        }
     });
 
     const printText = (text, speed = 40, callback = null) => {
@@ -262,7 +308,7 @@
             easyMode = (cmd === '2');
             state = 'BOOT';
             promptSpan.innerText = "C:\\>";
-            printText("CONFIGURING HARDWARE...\nWAITING FOR VACUUM TUBES TO WARM UP...\nCONNECTION LOCKED. TYPE 'HELP' TO DIAGNOSE.", 40);
+            printText("CONFIGURING HARDWARE...\nWAITING FOR VACUUM TUBES TO WARM UP...\nCONNECTION LOCKED. TYPE 'HELP' TO DIAGNOSE.");
         } else {
             printText("INVALID SELECTION. ENTER 1 OR 2.");
         }
@@ -282,10 +328,11 @@
             });
         } else {
             alertLevel++;
-            printText(`INVALID KEY. THE GESTAPO HAS BEEN NOTIFIED OF YOUR INCOMPETENCE.\nALERT LEVEL: ${alertLevel}/3. TYPE 'HELP' IF YOU LACK BASIC TRAINING.`);
+            printText(`INVALID KEY. THE GESTAPO HAS BEEN NOTIFIED OF YOUR INCOMPETENCE.\nALERT LEVEL: ${alertLevel}/3. TYPE 'HELP'.`);
             if (alertLevel >= 3) {
                 printText("*** CRITICAL ALERT: BUNKER DOORS BREACHED. TERMINAL PURGING. YOU HAVE FAILED. ***", 60, () => {
                     inputField.style.display = 'none';
+                    if(staticGainNode) staticGainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 2);
                 });
             }
         }
@@ -299,7 +346,7 @@
         if (action === 'HELP') {
             printText("AVAILABLE COMMANDS:\n- STATUS     : CHECK SYSTEM AND TRIANGULATION RISKS\n- SEARCH [X] : SEARCH ENVIRONMENT (E.G., SEARCH DESK, SEARCH LOCKER)\n- TAKE [X]   : ACQUIRE ITEM (E.G., TAKE COMPASS)\n- INV        : CHECK INVENTORY\n- BOOST_SIG  : AMPLIFY RADIO (WARNING: INCREASES DETECTION RISK)\n- REQ_EXTRACT: REQUEST EXTRACTION COORDINATES");
         } else if (action === 'STATUS') {
-            printText(`SYSTEM: NOMINAL.\nOPERATOR STATUS: ALIVE (TEMPORARILY).\nTRIANGULATION RISK: ${triangulationRisk}%`);
+            printText(`SYSTEM: NOMINAL.\nOPERATOR STATUS: ALIVE.\nTRIANGULATION RISK: ${triangulationRisk}%\nRADIO AMPLIFICATION LEVEL: ${signalBoosted}`);
         } else if (action === 'SEARCH') {
             if (!target) {
                 printText("SPECIFY TARGET: SEARCH DESK OR SEARCH LOCKER.");
@@ -336,22 +383,29 @@
                 printText(`CURRENT INVENTORY: ${inventory.join(', ')}.`);
             }
         } else if (action === 'BOOST_SIG') {
-            if (signalBoosted) {
-                printText("SIGNAL ALREADY AT MAXIMUM. STOP MASHING THE BUTTON.");
+            if (signalBoosted >= 3) {
+                printText("SIGNAL AT MAXIMUM THRESHOLD. EQUIPMENT OVERHEATING.");
             } else {
-                signalBoosted = true;
-                triangulationRisk += 40;
-                printText("WARNING: SIGNAL BOOSTED. CLARITY SECURED.\nCONSEQUENCE: GERMAN RDF STATIONS ARE LOCKING ONTO THIS SECTOR. YOUR EXTRACTION WINDOW IS SHRINKING.");
+                signalBoosted++;
+                triangulationRisk += 30;
+                
+                // Increase static volume audibly
+                if (staticGainNode) {
+                    let newVolume = 0.01 + (signalBoosted * 0.15);
+                    staticGainNode.gain.linearRampToValueAtTime(newVolume, audioCtx.currentTime + 1);
+                }
+
+                printText(`WARNING: SIGNAL BOOSTED TO LEVEL ${signalBoosted}. CLARITY SECURED.\nCONSEQUENCE: GERMAN RDF STATIONS ARE LOCKING ONTO THIS SECTOR. YOUR EXTRACTION WINDOW IS SHRINKING.`);
             }
         } else if (action === 'REQ_EXTRACT') {
-            if (!signalBoosted) {
+            if (signalBoosted === 0) {
                 printText("TRANSMISSION FAILED. STATIC INTERFERENCE TOO HIGH. HQ CANNOT HEAR YOU. CONSIDER YOUR SIGNAL STRENGTH.");
             } else if (!inventory.includes('COMPASS') || !inventory.includes('DOSSIER')) {
                 printText(`HQ: "NEGATIVE ON EXTRACTION. WE NEED THE INTEL DOSSIER AND YOU NEED A COMPASS TO NAVIGATE TO THE LZ. SECURE THOSE ASSETS FIRST."`);
             } else {
                 state = 'CALC_EXTRACT';
-                let timeWindow = 45 - (triangulationRisk * 0.25); 
-                printText(`HQ CONNECTED.\n"Assets confirmed. Listen up. Patrols are moving in. We are holding a C-47 transport at Sector Grid 70-X."\n"You are currently at Sector Grid 40-X. The distance is exactly 30 kilometers."\n"You must travel at a sprint pace of 10 kilometers per hour."\n"Due to your signal noise, we can only keep the plane waiting for ${timeWindow} hours."\n\nCALCULATE: How many hours will it take you to reach the transport?\nENTER HOURS:`);
+                let timeWindow = 45 - (triangulationRisk * 0.35); 
+                printText(`HQ CONNECTED.\n"Assets confirmed. Listen up. Patrols are moving in. We are holding a C-47 transport at Sector Grid 70-X."\n"You are currently at Sector Grid 40-X. The distance is exactly 30 kilometers."\n"You must travel at a sprint pace of 10 kilometers per hour."\n"Due to your signal noise, we can only keep the plane waiting for ${timeWindow.toFixed(1)} hours."\n\nCALCULATE: How many hours will it take you to reach the transport?\nENTER HOURS:`);
             }
         } else {
             printText("COMMAND UNRECOGNIZED. STOP TYPING GIBBERISH AND FOCUS.");
@@ -361,10 +415,11 @@
     const processExtraction = (cmd) => {
         let answer = parseFloat(cmd);
         if (answer === 3) {
-            let timeWindow = 45 - (triangulationRisk * 0.25);
+            let timeWindow = 45 - (triangulationRisk * 0.35);
             if (3 <= timeWindow) {
                 printText("COORDINATES LOCKED. THE MATH CHECKS OUT.\nGRAB YOUR GEAR. WE WILL SEE YOU IN LONDON.\n\n*** MISSION SUCCESS ***", 40, () => {
                     inputField.style.display = 'none';
+                    if(staticGainNode) staticGainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3); // fade out static
                 });
             } else {
                 printText("THE MATH IS CORRECT, BUT YOU TOOK TOO LONG. THE PLANE LEFT.\nYOUR DECISION TO BOOST THE SIGNAL BROUGHT THE PATROLS TOO FAST.\n\n*** MISSION FAILED ***", 60, () => {

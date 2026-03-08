@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Princess Room Decorator</title>
+    <title>Digital Dollhouse</title>
     <style>
         body { 
-            margin: 0; 
-            overflow: hidden; 
-            background: #ffe4e1; /* Stone wall */
-            touch-action: none; /* Critical for preventing mobile scroll during drag */
+            margin: 0; overflow: hidden; background: #87CEEB; /* Sky background */
+            touch-action: none; display: flex; justify-content: center; align-items: center; height: 100vh;
         }
-        canvas { display: block; }
+        canvas { 
+            box-shadow: 0 10px 50px rgba(0,0,0,0.3);
+            /* Visual scaling handled by canvas CSS to max out screen while keeping ratio */
+            max-width: 100vw; max-height: 100vh; object-fit: contain;
+        }
     </style>
 </head>
 <body>
@@ -21,68 +23,98 @@
 <script>
     const canvas = document.getElementById('stage');
     const ctx = canvas.getContext('2d');
-    let width, height;
-
-    // Thematic SVGs (Base64)
-    const svgs = {
-        princess: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MCAxMDAiPjxwb2x5Z29uIHBvaW50cz0iNDAsMzAgMTAsOTAgNzAsOTAiIGZpbGw9IiNGRjE0OTMiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjIwIiByPSIxNSIgZmlsbD0iI0ZGRDAwMCIvPjwvc3ZnPg==',
-        bed: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgNjAiPjxyZWN0IHg9IjAiIHk9IjMwIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjMwIiBmaWxsPSIjZmZhZmJkIi8+PHJlY3QgeD0iMTAiIHk9IjIwIiB3aWR0aD0iODAiIGhlaWdodD0iMjAiIGZpbGw9IiNmZmZmZmYiLz48cmVjdCB4PSI1IiB5PSIxMCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjZmZiNmMxIi8+PC9zdmc+',
-        drape: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MCAxMDAiPjxwYXRoIGQ9Ik0wLDBIMjBDNDAsMCw0MCwxMDAsMjAsMTAwSDBaIiBmaWxsPSIjRkY2OUI0Ii8+PC9zdmc+',
-        clock: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2MCAxMDAiPjxyZWN0IHg9IjIwIiB5PSIyMCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjOGI0NTEzIi8+PGNpcmNsZSBjeD0iMzAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNmZmQ3MDAiLz48Y2lyY2xlIGN4PSIzMCIgY3k9IjIwIiByPSIxNSIgZmlsbD0iI2ZmZmZmZiIvPjxwYXRoIGQ9Ik0zMCwyMEwzMCwxME0zMCwyMEwzOCwyNCIgc3Ryb2tlPSIjMDAwIiBzdHJva2Utd2lkdGg9IjIiLz48L3N2Zz4=',
-        chandelier: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgNjAiPjxwYXRoIGQ9Ik01MCwwTDUwLDIwTDIwLDUwTTUwLDIwTDgwLDUwTTQwLDQwTDQwLDMwTTYwLDQwTDYwLDMwIiBzdHJva2U9IiNmZmQ3MDAiIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iMyIvPjxjaXJjbGUgY3g9IjIwIiBjeT0iNTAiIHI9IjUiIGZpbGw9IiNmZmZmYmIiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSI1IiBmaWxsPSIjZmZmZmJiIi8+PGNpcmNsZSBjeD0iNjAiIGN5PSIzMCIgcj0iNSIgZmlsbD0iI2ZmZmZiYiIvPjxjaXJjbGUgY3g9IjgwIiBjeT0iNTAiIHI9IjUiIGZpbGw9IiNmZmZmYmIiLz48L3N2Zz4='
-    };
-
+    
+    // Virtual Game Resolution (Immutable Aspect Ratio)
+    const GAME_W = 1600;
+    const GAME_H = 1200;
+    
+    let scale = 1;
     let items = [];
     let isDragging = false;
     let dragTarget = null;
     let offsetX = 0;
     let offsetY = 0;
 
-    function initItems() {
-        // Pre-instantiate the objects she can move around
-        const startY = height - 120; // Bottom "tray" area
+    // Raw SVG String Generator - Ensures crisp rendering without external assets
+    const svgToURI = (svg) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+
+    const assetData = {
+        // Sims-style Anthropomorphic Figures
+        woman: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200"><circle cx="50" cy="30" r="20" fill="#f1c27d"/><path d="M30,60 Q50,40 70,60 L85,140 L15,140 Z" fill="#9370DB"/><rect x="35" y="140" width="10" height="50" fill="#f1c27d"/><rect x="55" y="140" width="10" height="50" fill="#f1c27d"/></svg>`),
+        man: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200"><circle cx="50" cy="30" r="20" fill="#f1c27d"/><rect x="25" y="55" width="50" height="70" rx="10" fill="#4682B4"/><rect x="30" y="125" width="15" height="70" fill="#2F4F4F"/><rect x="55" y="125" width="15" height="70" fill="#2F4F4F"/></svg>`),
+        boy: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200"><circle cx="50" cy="40" r="22" fill="#f1c27d"/><rect x="25" y="65" width="50" height="60" rx="8" fill="#FF8C00"/><rect x="30" y="125" width="15" height="60" fill="#191970"/><rect x="55" y="125" width="15" height="60" fill="#191970"/></svg>`),
+        girl: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200"><circle cx="50" cy="50" r="22" fill="#f1c27d"/><path d="M30,75 Q50,60 70,75 L85,140 L15,140 Z" fill="#FF69B4"/><rect x="35" y="140" width="10" height="40" fill="#f1c27d"/><rect x="55" y="140" width="10" height="40" fill="#f1c27d"/></svg>`),
         
-        const loadImg = (src) => {
+        // Furniture
+        bed: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120"><rect x="10" y="60" width="180" height="30" rx="5" fill="#8B4513"/><rect x="20" y="40" width="160" height="30" fill="#FFB6C1"/><rect x="25" y="30" width="50" height="20" rx="10" fill="#FFF"/></svg>`),
+        couch: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120"><rect x="10" y="30" width="180" height="60" rx="10" fill="#CD5C5C"/><rect x="20" y="60" width="160" height="30" fill="#F08080"/><rect x="5" y="50" width="25" height="40" rx="5" fill="#8B0000"/><rect x="170" y="50" width="25" height="40" rx="5" fill="#8B0000"/></svg>`),
+        fridge: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 160"><rect x="10" y="10" width="60" height="140" rx="5" fill="#E0E0E0"/><rect x="10" y="10" width="60" height="50" rx="5" fill="#D3D3D3"/><line x1="20" y1="20" x2="20" y2="40" stroke="#A9A9A9" stroke-width="3"/><line x1="20" y1="70" x2="20" y2="100" stroke="#A9A9A9" stroke-width="3"/></svg>`),
+        tub: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><path d="M10,30 L150,30 L140,80 Q140,90 130,90 L30,90 Q20,90 20,80 Z" fill="#FFF" stroke="#ADD8E6" stroke-width="4"/><rect x="130" y="10" width="10" height="20" fill="#C0C0C0"/></svg>`),
+        table: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><rect x="20" y="30" width="120" height="15" rx="5" fill="#D2B48C"/><rect x="30" y="45" width="10" height="50" fill="#8B4513"/><rect x="120" y="45" width="10" height="50" fill="#8B4513"/></svg>`),
+        tv: svgToURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100"><rect x="10" y="10" width="100" height="70" rx="5" fill="#333"/><rect x="15" y="15" width="90" height="60" fill="#1E90FF"/><rect x="40" y="80" width="40" height="10" fill="#222"/></svg>`)
+    };
+
+    function initGame() {
+        canvas.width = GAME_W;
+        canvas.height = GAME_H;
+        
+        const loadAsset = (uri, x, y, w, h) => {
             let img = new Image();
-            img.src = src;
-            return img;
+            img.src = uri;
+            items.push({ img, x, y, w, h });
         };
 
-        items = [
-            { img: loadImg(svgs.drape), x: width * 0.1, y: startY, w: 60, h: 150 },
-            { img: loadImg(svgs.drape), x: width * 0.2, y: startY, w: 60, h: 150 }, // Two drapes for symmetry
-            { img: loadImg(svgs.chandelier), x: width * 0.35, y: startY, w: 100, h: 60 },
-            { img: loadImg(svgs.clock), x: width * 0.5, y: startY, w: 50, h: 120 },
-            { img: loadImg(svgs.bed), x: width * 0.7, y: startY, w: 160, h: 100 },
-            { img: loadImg(svgs.princess), x: width * 0.9, y: startY, w: 80, h: 100 }
-        ];
+        const yardY = GAME_H - 120; // Bottom inventory area
+
+        // Populate Figures (Varying heights for adults vs children)
+        loadAsset(assetData.man, 150, yardY, 70, 160);
+        loadAsset(assetData.woman, 250, yardY, 70, 160);
+        loadAsset(assetData.boy, 350, yardY + 15, 60, 130);
+        loadAsset(assetData.girl, 450, yardY + 25, 50, 110);
+
+        // Populate Furniture
+        loadAsset(assetData.bed, 650, yardY, 180, 100);
+        loadAsset(assetData.tub, 850, yardY, 140, 90);
+        loadAsset(assetData.couch, 1050, yardY, 160, 90);
+        loadAsset(assetData.tv, 1250, yardY, 100, 80);
+        loadAsset(assetData.table, 1400, yardY, 140, 90);
+        loadAsset(assetData.fridge, 1500, yardY, 70, 140);
+        
+        resize();
+        draw();
     }
 
     function resize() {
-        width = canvas.width = window.innerWidth;
-        height = canvas.height = window.innerHeight;
-        if(items.length === 0) initItems();
+        // Compute matrix scale factor to fit window while preserving aspect ratio
+        scale = Math.min(window.innerWidth / GAME_W, window.innerHeight / GAME_H);
+        canvas.style.width = `${GAME_W * scale}px`;
+        canvas.style.height = `${GAME_H * scale}px`;
     }
 
-    // Input Handling
-    canvas.addEventListener('pointerdown', (e) => {
-        const mx = e.clientX;
-        const my = e.clientY;
+    // Input Handling - Mapping physical screen pixels to the virtual matrix
+    function getEventPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: (e.clientX - rect.left) / scale,
+            y: (e.clientY - rect.top) / scale
+        };
+    }
 
-        // Iterate backwards to grab the item drawn on top
+    canvas.addEventListener('pointerdown', (e) => {
+        const pos = getEventPos(e);
+        
+        // Reverse iteration for correct Z-index grab
         for (let i = items.length - 1; i >= 0; i--) {
             let item = items[i];
-            // Bounding box collision detection
-            if (mx >= item.x - item.w/2 && mx <= item.x + item.w/2 &&
-                my >= item.y - item.h/2 && my <= item.y + item.h/2) {
+            if (pos.x >= item.x - item.w/2 && pos.x <= item.x + item.w/2 &&
+                pos.y >= item.y - item.h/2 && pos.y <= item.y + item.h/2) {
                 
                 isDragging = true;
                 dragTarget = item;
-                // Calculate offset so the object doesn't snap its center to the cursor
-                offsetX = mx - item.x;
-                offsetY = my - item.y;
-
-                // Move selected item to end of array to draw on top of others
+                offsetX = pos.x - item.x;
+                offsetY = pos.y - item.y;
+                
+                // Splice and push to bring to absolute front
                 items.push(items.splice(i, 1)[0]);
                 break;
             }
@@ -91,8 +123,9 @@
 
     canvas.addEventListener('pointermove', (e) => {
         if (!isDragging || !dragTarget) return;
-        dragTarget.x = e.clientX - offsetX;
-        dragTarget.y = e.clientY - offsetY;
+        const pos = getEventPos(e);
+        dragTarget.x = pos.x - offsetX;
+        dragTarget.y = pos.y - offsetY;
     });
 
     window.addEventListener('pointerup', () => {
@@ -100,25 +133,61 @@
         dragTarget = null;
     });
 
-    function draw() {
-        ctx.clearRect(0, 0, width, height);
+    function drawHouse() {
+        const houseW = 1200;
+        const houseH = 700;
+        const houseX = (GAME_W - houseW) / 2;
+        const houseY = 250;
 
-        // Draw Environment (Static)
-        // Walls
-        ctx.fillStyle = '#ffe4e1'; 
-        ctx.fillRect(0, 0, width, height);
-        // Window Background
-        ctx.fillStyle = '#ffeff0';
-        ctx.fillRect(width * 0.3, height * 0.1, width * 0.4, height * 0.5);
-        // Window Frame
-        ctx.strokeStyle = '#ffb6c1';
+        // Draw Roof (Triangle)
+        ctx.fillStyle = '#FF69B4'; // Pink Roof
+        ctx.beginPath();
+        ctx.moveTo(GAME_W / 2, 50);
+        ctx.lineTo(houseX - 50, houseY);
+        ctx.lineTo(houseX + houseW + 50, houseY);
+        ctx.fill();
+
+        // Base Structure Outline
+        ctx.fillStyle = '#FFF5EE';
+        ctx.fillRect(houseX, houseY, houseW, houseH);
+        ctx.strokeStyle = '#8B4513';
         ctx.lineWidth = 10;
-        ctx.strokeRect(width * 0.3, height * 0.1, width * 0.4, height * 0.5);
-        // Floor / Carpet
-        ctx.fillStyle = '#ff69b4';
-        ctx.fillRect(0, height * 0.65, width, height * 0.35);
+        ctx.strokeRect(houseX, houseY, houseW, houseH);
 
-        // Draw Interactive Items
+        // Cross-section walls (dividing 4 rooms)
+        ctx.beginPath();
+        ctx.moveTo(houseX + houseW/2, houseY);
+        ctx.lineTo(houseX + houseW/2, houseY + houseH);
+        ctx.moveTo(houseX, houseY + houseH/2);
+        ctx.lineTo(houseX + houseW, houseY + houseH/2);
+        ctx.stroke();
+
+        // Room Backgrounds (Subtle tints)
+        ctx.fillStyle = 'rgba(255, 182, 193, 0.2)'; // Top Left: Pink Room
+        ctx.fillRect(houseX, houseY, houseW/2, houseH/2);
+        
+        ctx.fillStyle = 'rgba(173, 216, 230, 0.2)'; // Top Right: Blue Room (Bath)
+        ctx.fillRect(houseX + houseW/2, houseY, houseW/2, houseH/2);
+        
+        ctx.fillStyle = 'rgba(255, 228, 181, 0.2)'; // Bottom Left: Yellow Room (Living)
+        ctx.fillRect(houseX, houseY + houseH/2, houseW/2, houseH/2);
+        
+        ctx.fillStyle = 'rgba(152, 251, 152, 0.2)'; // Bottom Right: Green Room (Kitchen)
+        ctx.fillRect(houseX + houseW/2, houseY + houseH/2, houseW/2, houseH/2);
+    }
+
+    function draw() {
+        // Clear Sky Background
+        ctx.fillStyle = '#87CEEB';
+        ctx.fillRect(0, 0, GAME_W, GAME_H);
+
+        // Draw Lawn/Yard (Inventory Area)
+        ctx.fillStyle = '#7CFC00';
+        ctx.fillRect(0, GAME_H - 250, GAME_W, 250);
+
+        drawHouse();
+
+        // Render Assets
         items.forEach(item => {
             if(item.img.complete) {
                 ctx.drawImage(item.img, item.x - item.w/2, item.y - item.h/2, item.w, item.h);
@@ -129,8 +198,7 @@
     }
 
     window.addEventListener('resize', resize);
-    resize();
-    draw();
+    initGame();
 </script>
 </body>
 </html>

@@ -2,537 +2,299 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Terminal Mk IV - Operation Vanguard</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Unseen: Economic Simulator</title>
     <style>
-        body {
-            background-color: #020202;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: 'VT323', monospace;
-            overflow: hidden;
-            user-select: none;
-        }
-
-        #chassis {
-            background-color: #1e201d;
-            width: 96vw;
-            height: 96vh;
-            padding: 40px;
-            border-radius: 20px;
-            box-sizing: border-box;
-            box-shadow: inset 0 0 20px #000, 0 0 50px rgba(0,0,0,1);
-            border: 8px solid #0a0b0a;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .rivet {
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            background: #111;
-            border-radius: 50%;
-            box-shadow: inset 2px 2px 4px #333, inset -2px -2px 4px #000;
-        }
-        .r-tl { top: 12px; left: 12px; }
-        .r-tr { top: 12px; right: 12px; }
-        .r-bl { bottom: 12px; left: 12px; }
-        .r-br { bottom: 12px; right: 12px; }
-
-        #screen {
-            background: radial-gradient(circle at center, #051a05 0%, #000000 90%);
-            width: 100%;
-            height: 100%;
-            border-radius: 25px; 
-            padding: 30px;
-            box-sizing: border-box;
-            box-shadow: inset 0 0 80px rgba(0,0,0,1), 0 0 10px rgba(51,255,0,0.1);
-            border: 12px solid #050505;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            color: #33FF00;
-            text-shadow: 0 0 5px #33FF00, 0 0 10px #33FF00;
-            font-size: 1.8rem;
-            letter-spacing: 2px;
-            animation: flicker 0.15s infinite;
-        }
-
-        @keyframes flicker {
-            0% { opacity: 0.98; }
-            50% { opacity: 1; }
-            100% { opacity: 0.99; }
-        }
-
-        #screen::after {
-            content: " ";
-            display: block;
-            position: absolute;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
-            z-index: 4;
-            background-size: 100% 4px;
-            pointer-events: none;
-        }
-
-        #screen::before {
-            content: " ";
-            display: block;
-            position: absolute;
-            top: -10%; left: -10%; width: 120%; height: 120%;
-            background: radial-gradient(ellipse at top left, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 50%);
-            z-index: 5;
-            pointer-events: none;
-            border-radius: 50%;
-        }
-
-        #output {
-            flex-grow: 1;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            margin-bottom: 10px;
-            padding-right: 15px;
-            z-index: 3;
-            line-height: 1.2;
-        }
-
-        #input-line {
-            display: flex;
-            align-items: center;
-            font-weight: bold;
-            z-index: 3;
-            margin-bottom: 10px;
-        }
-
-        #prompt { margin-right: 15px; }
-
-        input[type="text"] {
-            background: transparent;
-            border: none;
-            color: #33FF00;
-            font-family: 'VT323', monospace;
-            font-size: 1em;
-            flex-grow: 1;
-            outline: none;
-            text-transform: uppercase;
-            text-shadow: 0 0 5px #33FF00;
-            letter-spacing: 2px;
-        }
-
-        /* Persistent Command Interface with Tooltips */
-        #command-bar {
-            display: none; 
-            border-top: 2px solid #1a551a;
-            padding-top: 10px;
-            margin-top: auto;
-            font-size: 1.3rem;
-            color: #1a881a;
-            text-shadow: none;
-            z-index: 3;
-            justify-content: space-between;
-            flex-wrap: wrap;
-        }
-
-        .cmd-block { 
-            border-right: 2px solid #1a551a; 
-            padding-right: 12px; 
-            margin-right: 12px; 
-            margin-bottom: 5px;
-            position: relative;
-            cursor: help;
-            color: #22a322;
-        }
-        
-        .cmd-block:last-child { border-right: none; }
-
-        /* Command Tooltip Generation */
-        .cmd-block:hover::after {
-            content: attr(data-desc);
-            position: absolute;
-            bottom: 140%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: max-content;
-            max-width: 300px;
-            background: #020a02;
-            border: 2px solid #33FF00;
-            padding: 10px;
-            white-space: pre-wrap;
-            color: #33FF00;
-            z-index: 20;
-            box-shadow: 0 0 15px #000;
-            pointer-events: none;
-            font-size: 1.2rem;
-            text-align: center;
-        }
-
-        /* Cipher Hover Mechanic */
-        .cipher-hint {
-            cursor: help;
-            border-bottom: 2px dotted #33FF00;
-            position: relative;
-            color: #FFFFCC; 
-        }
-        
-        .cipher-hint:hover::after {
-            content: "DECRYPTION LOGIC [SHIFT -3]:\A W -> T\A D -> A\A U -> R\A J -> G\A H -> E\A W -> T\A ========================\A FINAL ANSWER: TARGET\A (TYPE 'TARGET' TO BYPASS)";
-            position: absolute;
-            bottom: 125%; 
-            left: 50%;
-            transform: translateX(-50%); 
-            width: max-content; 
-            max-width: 80vw; 
-            background: #020a02;
-            border: 2px solid #33FF00;
-            padding: 15px;
-            white-space: pre-wrap; 
-            z-index: 10;
-            box-shadow: 0 0 20px #000;
-            pointer-events: none;
-            color: #33FF00;
-            line-height: 1.2;
-            text-align: left;
-        }
+        body { margin: 0; overflow: hidden; background-color: #0a0a0a; color: #fff; font-family: monospace; user-select: none; }
+        canvas { display: block; }
+        #hud { position: absolute; top: 20px; left: 20px; width: 300px; background: rgba(0,0,0,0.8); padding: 15px; border: 1px solid #333; }
+        .metric { margin-bottom: 10px; font-size: 14px; }
+        .bar-container { width: 100%; height: 10px; background: #222; margin-top: 4px; position: relative; }
+        .bar { height: 100%; transition: width 0.1s linear; }
+        #slider-container { margin-top: 20px; border-top: 1px solid #333; padding-top: 15px; }
+        input[type=range] { width: 100%; cursor: pointer; }
+        .label { display: flex; justify-content: space-between; font-size: 12px; color: #aaa; margin-bottom: 5px; }
+        #alarms { position: absolute; top: 20px; right: 20px; color: #ff3333; font-weight: bold; font-size: 16px; text-align: right; }
     </style>
 </head>
 <body>
 
-<div id="chassis">
-    <div class="rivet r-tl"></div>
-    <div class="rivet r-tr"></div>
-    <div class="rivet r-bl"></div>
-    <div class="rivet r-br"></div>
-    <div id="screen">
-        <div id="output"></div>
-        <div id="input-line">
-            <span id="prompt">SYS_INIT></span>
-            <input type="text" id="cmd" autocomplete="off" autofocus>
+    <div id="hud">
+        <div class="metric">
+            Purchasing Power (Real GDP) <span id="gdp-val">100</span>
+            <div class="bar-container"><div id="gdp-bar" class="bar" style="width: 50%; background: #00ffcc;"></div></div>
         </div>
-        <div id="command-bar">
-            <span class="cmd-block" data-desc="Check system and tracking risk metrics.">STATUS</span>
-            <span class="cmd-block" data-desc="Scan environment targets (e.g., SEARCH DESK).">SEARCH [X]</span>
-            <span class="cmd-block" data-desc="Acquire physical assets.">TAKE [X]</span>
-            <span class="cmd-block" data-desc="Check currently held items.">INV</span>
-            <span class="cmd-block" data-desc="Amplify radio output. High detection risk.">BOOST_SIG</span>
-            <span class="cmd-block" data-desc="Single-use. Confounds enemy Radio Direction Finding.">JAM_FREQ</span>
-            <span class="cmd-block" data-desc="Contact Allied Command for mission parameters.">COMM_HQ</span>
-            <span class="cmd-block" data-desc="Override root directory. Requires DOSSIER.">HACK_ROOT</span>
-            <span class="cmd-block" data-desc="Request extraction transport vector.">REQ_EXTRACT</span>
+        <div class="metric">
+            Political Approval <span id="pol-val">100%</span>
+            <div class="bar-container"><div id="pol-bar" class="bar" style="width: 100%; background: #00ccff;"></div></div>
+        </div>
+        <div class="metric">
+            Foreign Taxpayer Pool (Subsidies) <span id="foreign-val">100%</span>
+            <div class="bar-container"><div id="foreign-bar" class="bar" style="width: 100%; background: #ffaa00;"></div></div>
+        </div>
+
+        <div id="slider-container">
+            <div class="label"><span>Tariff: Foreign Steel</span><span id="tariff-val">0%</span></div>
+            <input type="range" id="tariff-slider" min="0" max="100" value="0">
         </div>
     </div>
-</div>
+
+    <div id="alarms"></div>
+    <canvas id="simCanvas"></canvas>
 
 <script>
-    const outputDiv = document.getElementById('output');
-    const inputField = document.getElementById('cmd');
-    const promptSpan = document.getElementById('prompt');
-    const commandBar = document.getElementById('command-bar');
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-    // Engine Variables
-    let state = 'DIFFICULTY_SELECT';
-    let isTyping = false;
-    let easyMode = false;
-    
-    // Tactical Variables
-    let alertLevel = 0;
-    let signalBoosted = 0; 
-    let triangulationRisk = 0;
-    let jammerUsed = false;
-    
-    // Environmental Logic
-    let inventory = [];
-    let environment = {
-        'DESK': ['COMPASS'],
-        'LOCKER': ['DOSSIER']
-    };
+    // DOM Elements
+    const gdpBar = document.getElementById('gdp-bar');
+    const polBar = document.getElementById('pol-bar');
+    const foreignBar = document.getElementById('foreign-bar');
+    const tariffSlider = document.getElementById('tariff-slider');
+    const tariffValDisplay = document.getElementById('tariff-val');
+    const alarms = document.getElementById('alarms');
 
-    // Procedural Audio Engine
-    let audioCtx;
-    let staticGainNode;
+    // State Variables
+    let tariff = 0;
+    let purchasingPower = 50; 
+    let politicalApproval = 100;
+    let foreignTaxPool = 100;
+    let consumerSurplus = 0;
+    let newTechSpawned = false;
 
-    const initAudio = () => {
-        if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            startStaticNoise();
-        }
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-    };
-
-    const startStaticNoise = () => {
-        const bufferSize = audioCtx.sampleRate * 2; 
-        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-        
-        const noise = audioCtx.createBufferSource();
-        noise.buffer = buffer;
-        noise.loop = true;
-        
-        const filter = audioCtx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 800; 
-
-        staticGainNode = audioCtx.createGain();
-        staticGainNode.gain.value = 0.005; 
-
-        noise.connect(filter);
-        filter.connect(staticGainNode);
-        staticGainNode.connect(audioCtx.destination);
-        noise.start();
-    };
-
-    const playClick = () => {
-        if (!audioCtx) return;
-        const t = audioCtx.currentTime;
-
-        const oscHigh = audioCtx.createOscillator();
-        const gainHigh = audioCtx.createGain();
-        oscHigh.type = 'square';
-        oscHigh.frequency.setValueAtTime(1500, t);
-        oscHigh.frequency.exponentialRampToValueAtTime(100, t + 0.015);
-        gainHigh.gain.setValueAtTime(0.4, t);
-        gainHigh.gain.exponentialRampToValueAtTime(0.001, t + 0.015);
-        oscHigh.connect(gainHigh).connect(audioCtx.destination);
-        oscHigh.start(t);
-        oscHigh.stop(t + 0.015);
-
-        const oscLow = audioCtx.createOscillator();
-        const gainLow = audioCtx.createGain();
-        oscLow.type = 'triangle';
-        oscLow.frequency.setValueAtTime(400, t);
-        oscLow.frequency.exponentialRampToValueAtTime(50, t + 0.03);
-        gainLow.gain.setValueAtTime(0.3, t);
-        gainLow.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
-        oscLow.connect(gainLow).connect(audioCtx.destination);
-        oscLow.start(t);
-        oscLow.stop(t + 0.03);
-    };
-
-    inputField.addEventListener('input', () => {
-        if (inputField.value.trim() !== '') {
-            initAudio(); 
-            playClick();
-        }
+    tariffSlider.addEventListener('input', (e) => {
+        tariff = e.target.value / 100;
+        tariffValDisplay.innerText = `${e.target.value}%`;
     });
 
-    const printText = (text, speed = 30, callback = null) => {
-        isTyping = true;
-        inputField.disabled = true;
-        let i = 0;
-        
-        if (text.includes('<span')) {
-            outputDiv.innerHTML += text + '<br><br>';
-            outputDiv.scrollTop = outputDiv.scrollHeight;
-            isTyping = false;
-            inputField.disabled = false;
-            inputField.focus();
-            if (callback) callback();
-            return;
+    // Architecture
+    const nodes = {
+        foreign: { x: canvas.width * 0.1, y: canvas.height * 0.3, radius: 40, color: '#ffaa00', name: 'Foreign Subsidized Steel', active: true },
+        domSteel: { x: canvas.width * 0.1, y: canvas.height * 0.7, radius: 40, color: '#00ccff', name: 'Domestic Steel', health: 100 },
+        mfg: { x: canvas.width * 0.5, y: canvas.height * 0.5, radius: 50, color: '#cccccc', name: 'Manufacturing' },
+        consumer: { x: canvas.width * 0.9, y: canvas.height * 0.5, radius: 60, color: '#00ffcc', name: 'Consumer Household' },
+        newTech: { x: canvas.width * 0.5, y: canvas.height * 0.8, radius: 0, targetRadius: 50, color: '#ff00ff', name: 'Advanced Tech (Creative Destruction)', active: false }
+    };
+
+    let particles = [];
+
+    class Particle {
+        constructor(startX, startY, targetX, targetY, type) {
+            this.x = startX;
+            this.y = startY;
+            this.tx = targetX;
+            this.ty = targetY;
+            
+            // Add slight curve/noise to path
+            this.angle = Math.atan2(targetY - startY, targetX - startX);
+            this.speed = Math.random() * 2 + 1.5;
+            this.vx = Math.cos(this.angle) * this.speed;
+            this.vy = Math.sin(this.angle) * this.speed;
+            
+            this.type = type; // 'cheap_steel', 'dom_steel', 'expensive_good', 'cheap_good', 'new_tech'
+            this.color = this.getColor();
+            this.life = 1;
         }
 
-        const interval = setInterval(() => {
-            outputDiv.innerHTML += text.charAt(i);
-            if (text.charAt(i) !== ' ' && text.charAt(i) !== '\n') playClick();
-            outputDiv.scrollTop = outputDiv.scrollHeight;
-            i++;
-            if (i >= text.length) {
-                clearInterval(interval);
-                outputDiv.innerHTML += '<br><br>';
-                isTyping = false;
-                inputField.disabled = false;
-                inputField.focus();
-                if (callback) callback();
+        getColor() {
+            if (this.type === 'cheap_steel') return '#ffaa00';
+            if (this.type === 'dom_steel') return '#00ccff';
+            if (this.type === 'expensive_good') return '#ff3333'; // The unseen cost cascade
+            if (this.type === 'cheap_good') return '#00ffcc';
+            if (this.type === 'new_tech') return '#ff00ff';
+            return '#fff';
+        }
+
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            
+            // Check collision with target
+            const dist = Math.hypot(this.tx - this.x, this.ty - this.y);
+            if (dist < 20) {
+                this.life = 0;
+                return true; // Arrived
             }
-        }, speed);
-    };
-
-    const handleInput = (rawCmd) => {
-        if (isTyping) return;
-        initAudio();
-        const cmd = rawCmd.trim().toUpperCase();
-        outputDiv.innerHTML += `<span style="color:#FFF">> ${cmd}</span><br>`;
-        inputField.value = '';
-
-        switch (state) {
-            case 'DIFFICULTY_SELECT':
-                processDifficulty(cmd);
-                break;
-            case 'BOOT':
-                processBoot(cmd);
-                break;
-            case 'CONNECTED':
-                processCommand(cmd);
-                break;
-            case 'CALC_EXTRACT':
-                processExtraction(cmd);
-                break;
+            return false;
         }
-    };
 
-    const processDifficulty = (cmd) => {
-        if (cmd === '1' || cmd === '2') {
-            easyMode = (cmd === '2');
-            state = 'BOOT';
-            promptSpan.innerText = "C:\\>";
-            printText("KONFIGURIEREN HARDWARE...\nWARTEN AUF CATHODE RAY TUBE WARMUP...\nVERBINDUNG GESPERRT. TYPE 'HELP' TO DIAGNOSE.");
-        } else {
-            printText("UNGÜLTIGE AUSWAHL. ENTER 1 OR 2.");
+        draw() {
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+            ctx.fill();
         }
-    };
+    }
 
-    const processBoot = (cmd) => {
-        if (cmd === 'HELP') {
-            let cipherString = easyMode ? '<span class="cipher-hint">WDUJHW</span>' : 'WDUJHW';
-            printText(`SYSTEM FEHLER: ALLIED OVERRIDE REQUIRED. ZUGRIFF DENIED.\nAUTHORIZATION CIPHER IN USE: CAESAR SHIFT -3.\nABGEFANGEN KEY: ${cipherString}\nENTER DECRYPTED SCHLÜSSEL:`);
-            return;
-        }
-        
-        if (cmd === 'TARGET') {
-            printText("ZUGRIFF GEWÄHRT. AUTHORIZATION ACCEPTED. WELCOME TO TERMINAL MK IV.\nTYPE 'HELP' FOR TACTICAL OPERATIONS.", 30, () => {
-                state = 'CONNECTED';
-                promptSpan.innerText = "HQ_LINK>";
-            });
-        } else {
-            alertLevel++;
-            printText(`INVALID KEY. THE GESTAPO HAS BEEN NOTIFIED OF YOUR INCOMPETENCE.\nWARNSTUFE: ${alertLevel}/3. TYPE 'HELP'.`);
-            if (alertLevel >= 3) {
-                printText("*** CRITICAL ALERT: BUNKER DOORS BREACHED. TERMINAL PURGING. YOU HAVE FAILED. ***", 50, () => {
-                    inputField.style.display = 'none';
-                    if(staticGainNode) staticGainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 2);
-                });
-            }
-        }
-    };
-
-    const processCommand = (cmd) => {
-        const args = cmd.split(' ');
-        const action = args[0];
-        const target = args[1];
-
-        if (action === 'HELP') {
-            commandBar.style.display = 'flex';
-            printText("COMMAND INTERFACE UNLOCKED. HUD ENGAGED. HOVER OVER BOTTOM COMMANDS FOR ASSISTANCE.");
-        } else if (action === 'STATUS') {
-            printText(`SYSTEM: NOMINAL.\nOPERATOR STATUS: ALIVE.\nTRIANGULATION RISK: ${triangulationRisk}%\nRADIO AMPLIFICATION: LEVEL ${signalBoosted}\nJAMMER AVAILABLE: ${!jammerUsed}`);
-        } else if (action === 'SEARCH') {
-            if (!target) {
-                printText("SPECIFY TARGET: SEARCH DESK OR SEARCH LOCKER.");
-            } else if (environment[target]) {
-                if (environment[target].length > 0) {
-                    printText(`SCANNED ${target}. IDENTIFIED ASSETS: ${environment[target].join(', ')}.`);
-                } else {
-                    printText(`${target} IS EMPTY.`);
-                }
+    function spawnParticles() {
+        // 1. Foreign Subsidy Logic
+        if (nodes.foreign.active && foreignTaxPool > 0) {
+            // Foreign dumps cheap steel. Tax pool drains.
+            foreignTaxPool -= 0.05;
+            
+            // Tariff wall check. If tariff is high, probability of particle making it drops.
+            if (Math.random() > tariff) {
+                particles.push(new Particle(nodes.foreign.x, nodes.foreign.y, nodes.mfg.x, nodes.mfg.y, 'cheap_steel'));
             } else {
-                printText("TARGET NOT FOUND IN IMMEDIATE VICINITY.");
+                // Deadweight loss / blocked
+                ctx.fillStyle = 'rgba(255, 51, 51, 0.5)';
+                ctx.fillRect(nodes.foreign.x + 50, nodes.foreign.y + (Math.random()*40-20), 5, 5);
             }
-        } else if (action === 'TAKE') {
-            if (!target) printText("SPECIFY ITEM TO TAKE.");
-            else {
-                let found = false;
-                for (let key in environment) {
-                    const index = environment[key].indexOf(target);
-                    if (index > -1) {
-                        environment[key].splice(index, 1);
-                        inventory.push(target);
-                        printText(`ACQUIRED: ${target}. ADDED TO INVENTORY.`);
-                        found = true;
-                        break;
+        }
+
+        // 2. Domestic Steel Logic
+        if (nodes.domSteel.health > 0) {
+            // Dom Steel struggles to compete with subsidized foreign goods unless protected by tariff
+            if (tariff < 0.3 && foreignTaxPool > 0) {
+                nodes.domSteel.health -= 0.1; // Frictional unemployment
+                politicalApproval -= 0.05; // The political pressure
+            } else {
+                nodes.domSteel.health = Math.min(100, nodes.domSteel.health + 0.2);
+                politicalApproval = Math.min(100, politicalApproval + 0.1);
+                particles.push(new Particle(nodes.domSteel.x, nodes.domSteel.y, nodes.mfg.x, nodes.mfg.y, 'dom_steel'));
+            }
+        }
+
+        // 3. Manufacturing to Consumer Logic (The Cost Cascade)
+        if (Math.random() > 0.1) {
+            // If protected by tariff, inputs are expensive. If subsidized, inputs are cheap.
+            let outType = (tariff > 0.1 || nodes.domSteel.health > 80) ? 'expensive_good' : 'cheap_good';
+            
+            // If foreign runs out of subsidies and tariff is 0, market normalizes.
+            if (foreignTaxPool <= 0 && tariff === 0) outType = 'cheap_good';
+
+            particles.push(new Particle(nodes.mfg.x, nodes.mfg.y, nodes.consumer.x, nodes.consumer.y, outType));
+        }
+
+        // 4. Creative Destruction (New Tech Spawn)
+        if (newTechSpawned) {
+            particles.push(new Particle(nodes.newTech.x, nodes.newTech.y, nodes.consumer.x, nodes.consumer.y, 'new_tech'));
+        }
+    }
+
+    function updateLogic() {
+        // Foreign collapse
+        if (foreignTaxPool <= 0) {
+            foreignTaxPool = 0;
+            nodes.foreign.active = false;
+        }
+
+        // Game Over condition (Political)
+        if (politicalApproval <= 0) {
+            alarms.innerText = "GOVERNMENT COLLAPSE: Approval hit 0%.";
+            return;
+        }
+
+        // Purchasing Power Decay (Baseline inflation/consumption)
+        purchasingPower -= 0.05;
+
+        // Process Arrivals
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            if (p.update()) { // Arrived
+                if (p.tx === nodes.consumer.x && p.ty === nodes.consumer.y) {
+                    if (p.type === 'cheap_good') {
+                        purchasingPower += 0.1; // Extends standard of living
+                        consumerSurplus += 0.1; // Banks surplus capital
+                    } else if (p.type === 'expensive_good') {
+                        purchasingPower -= 0.05; // The hidden tax of the tariff
+                    } else if (p.type === 'new_tech') {
+                        purchasingPower += 0.3; // High velocity/value multiplier
                     }
                 }
-                if (!found) printText("ITEM NOT FOUND OR ALREADY ACQUIRED.");
+                particles.splice(i, 1);
             }
-        } else if (action === 'INV') {
-            if (inventory.length === 0) printText("INVENTORY EMPTY.");
-            else printText(`CURRENT INVENTORY: ${inventory.join(', ')}.`);
-        } else if (action === 'BOOST_SIG') {
-            if (signalBoosted >= 3) {
-                printText("SIGNAL AT MAXIMUM THRESHOLD. EQUIPMENT OVERHEATING.");
-            } else {
-                signalBoosted++;
-                triangulationRisk += 30;
-                
-                if (staticGainNode) {
-                    let newVolume = 0.005 + (signalBoosted * 0.15);
-                    staticGainNode.gain.linearRampToValueAtTime(newVolume, audioCtx.currentTime + 1);
-                }
-
-                printText(`WARNING: SIGNAL BOOSTED TO LEVEL ${signalBoosted}. CLARITY SECURED.\nCONSEQUENCE: GERMAN RDF STATIONS ARE LOCKING ONTO THIS SECTOR. YOUR EXTRACTION WINDOW IS SHRINKING.`);
-            }
-        } else if (action === 'JAM_FREQ') {
-            if (jammerUsed) {
-                printText("FREQUENCY JAMMER ALREADY EXPENDED. HARDWARE BURNT OUT.");
-            } else {
-                jammerUsed = true;
-                triangulationRisk = Math.max(0, triangulationRisk - 40);
-                printText("ELECTRONIC WARFARE DEPLOYED. BROADBAND WHITE NOISE TRANSMITTED. ENEMY DIRECTION FINDING CONFOUNDED.\nTRIANGULATION RISK SEVERELY REDUCED.");
-            }
-        } else if (action === 'COMM_HQ') {
-            if (signalBoosted === 0) {
-                printText("TRANSMISSION FAILED. STATIC INTERFERENCE TOO HIGH. HQ CANNOT HEAR YOU.");
-            } else {
-                printText(`HQ: "We read you. Listen closely. We cannot pull you out yet. That bunker mainframe contains the V2 flight trajectories.\nExecute command HACK_ROOT to download them. We need those plans to win the war. Out."`);
-            }
-        } else if (action === 'HACK_ROOT') {
-            if (inventory.includes('WAR_PLANS')) {
-                printText("ROOT DIRECTORY ALREADY COMPROMISED. SCHEMATICS SECURED.");
-            } else if (!inventory.includes('DOSSIER')) {
-                printText("ACCESS DENIED. ADMINISTRATOR PASSWORD REQUIRED. SEARCH THE ENVIRONMENT FOR INTEL.");
-            } else {
-                inventory.push('WAR_PLANS');
-                triangulationRisk += 25;
-                printText("DOSSIER PASSWORD ACCEPTED. INITIATING MAINFRAME OVERRIDE...\nSUCCESS. V2 SCHEMATICS DOWNLOADED.\nWARNING: MASSIVE DATA TRANSFER DETECTED BY ENEMY ROUTERS. TRACKING RISK SPIKED.");
-            }
-        } else if (action === 'REQ_EXTRACT') {
-            if (signalBoosted === 0) {
-                printText("TRANSMISSION FAILED. SIGNAL WEAK.");
-            } else if (!inventory.includes('COMPASS') || !inventory.includes('WAR_PLANS')) {
-                printText(`HQ: "NEGATIVE ON EXTRACTION. WE NEED THE V2 WAR_PLANS AND YOU NEED A COMPASS TO NAVIGATE TO THE LZ. ACCOMPLISH THE MISSION."`);
-            } else {
-                state = 'CALC_EXTRACT';
-                let timeWindow = 45 - (triangulationRisk * 0.35); 
-                printText(`HQ CONNECTED.\n"Plans confirmed. Brilliant work. Patrols are moving in fast. We are holding a C-47 transport at Sector Grid 70-X."\n"You are currently at Sector Grid 40-X. The distance is exactly 30 kilometers."\n"You must travel at a sprint pace of 10 kilometers per hour."\n"Due to enemy convergence, we can only keep the plane waiting for ${timeWindow.toFixed(1)} hours."\n\nCALCULATE: How many hours will it take you to reach the transport?\nENTER HOURS:`);
-            }
-        } else {
-            printText("COMMAND UNRECOGNIZED. FOCUS ON THE MISSION.");
         }
-    };
 
-    const processExtraction = (cmd) => {
-        let answer = parseFloat(cmd);
-        if (answer === 3) {
-            let timeWindow = 45 - (triangulationRisk * 0.35);
-            if (3 <= timeWindow) {
-                printText("COORDINATES LOCKED. THE MATH CHECKS OUT.\nGRAB YOUR GEAR. WE WILL SEE YOU IN LONDON.\n\n*** MISSION SUCCESS ***", 40, () => {
-                    inputField.style.display = 'none';
-                    if(staticGainNode) staticGainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3); 
-                });
-            } else {
-                printText("THE MATH IS CORRECT, BUT YOU TOOK TOO LONG TO MANAGE YOUR SIGNAL RISKS. THE PLANE LEFT.\nYOUR DECISIONS BROUGHT THE PATROLS TOO FAST.\n\n*** MISSION FAILED ***", 60, () => {
-                    inputField.style.display = 'none';
-                });
+        // The Creative Destruction Trigger
+        if (consumerSurplus > 50 && nodes.domSteel.health <= 0 && !newTechSpawned) {
+            newTechSpawned = true;
+            nodes.newTech.active = true;
+            alarms.innerText = "SURPLUS CAPITAL DEPLOYED: New Tech Sector Emerged.";
+            alarms.style.color = "#ff00ff";
+        }
+
+        // Node animation
+        if (nodes.newTech.active && nodes.newTech.radius < nodes.newTech.targetRadius) {
+            nodes.newTech.radius += 0.5;
+        }
+
+        // Clamp values
+        purchasingPower = Math.max(0, Math.min(100, purchasingPower));
+        
+        // Update UI
+        gdpBar.style.width = `${purchasingPower}%`;
+        document.getElementById('gdp-val').innerText = Math.floor(purchasingPower);
+        
+        polBar.style.width = `${politicalApproval}%`;
+        document.getElementById('pol-val').innerText = Math.floor(politicalApproval) + "%";
+        
+        foreignBar.style.width = `${foreignTaxPool}%`;
+        
+        // Alarms
+        if (!newTechSpawned && politicalApproval < 30) {
+            alarms.innerText = "WARNING: Domestic Steel collapsing. Political pressure critical.";
+        } else if (!newTechSpawned && politicalApproval >= 30) {
+            alarms.innerText = "";
+        }
+    }
+
+    function drawNodes() {
+        ctx.globalCompositeOperation = 'lighter';
+        for (const key in nodes) {
+            const n = nodes[key];
+            if (n.radius <= 0 || (key === 'foreign' && !n.active && foreignTaxPool <= 0)) continue;
+            
+            // Draw Glow
+            const gradient = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.radius);
+            gradient.addColorStop(0, n.color);
+            gradient.addColorStop(1, 'transparent');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Labels
+            ctx.fillStyle = '#fff';
+            ctx.font = '12px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(n.name, n.x, n.y - n.radius - 10);
+            
+            // Health indicator for steel
+            if (key === 'domSteel') {
+                ctx.fillStyle = n.health > 20 ? '#00ccff' : '#ff3333';
+                ctx.fillText(`Health: ${Math.floor(n.health)}%`, n.x, n.y + n.radius + 15);
             }
-        } else {
-            printText("INCORRECT CALCULATION. TRY AGAIN:");
         }
-    };
+        ctx.globalCompositeOperation = 'source-over';
+    }
 
-    printText("SYSTEM AKTIVIERT. TERMINAL POWERED ON.\nBITTE CHOOSE YOUR PROTOCOL:\n[1] NORMAL OP (STANDARD VERSCHLÜSSELUNG)\n[2] TRAINING OP (ASSISTED ENTSCHLÜSSELUNG)\nENTER EINGABE:");
+    function loop() {
+        ctx.fillStyle = 'rgba(10, 10, 10, 0.3)'; // Trail effect
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    inputField.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-            handleInput(inputField.value);
+        if (politicalApproval > 0 && purchasingPower > 0) {
+            spawnParticles();
+            updateLogic();
+        } else if (purchasingPower <= 0) {
+            alarms.innerText = "SYSTEM FAILURE: Purchasing Power Exhausted (Inflation Trap).";
         }
+
+        drawNodes();
+        particles.forEach(p => p.draw());
+
+        requestAnimationFrame(loop);
+    }
+
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
     });
-</script>
 
+    loop();
+</script>
 </body>
 </html>
